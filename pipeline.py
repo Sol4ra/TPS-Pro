@@ -962,9 +962,7 @@ def phase_compute(n_trials=60, phase_name="compute", base_memory_config=None, se
         mem_src = "Memory" if phase_name == "compute_audit" else "previous"
         print(f"\n[*] Base memory config from {mem_src}: {len(base_memory_config)} params")
 
-    # Naked baseline (with memory config if revalidating)
     # Check if study is already complete before starting baseline server
-    is_pareto = _config.get("pareto", False)
     study, remaining, completed = setup_study(phase_name, n_trials, is_pareto=is_pareto)
     if remaining == 0:
         best = get_best_trial(study)
@@ -1330,7 +1328,6 @@ def phase_memory(n_trials=60, phase_name="memory", base_compute_config=None, see
     print("=" * 60)
 
     # Check if study is already complete before starting baseline server
-    is_pareto = _config.get("pareto", False)
     study, remaining, completed = setup_study(phase_name, n_trials, is_pareto=is_pareto)
     if remaining == 0:
         best = get_best_trial(study)
@@ -2149,7 +2146,6 @@ def phase_core_engine(n_trials=100):
     # Multivariate TPE learns parameter correlations — the key upgrade
     sampler = optuna.samplers.TPESampler(multivariate=True, seed=42, warn_independent_sampling=False)
     pruner = optuna.pruners.WilcoxonPruner(p_threshold=0.1)
-    is_pareto = _config.get("pareto", False)
     study, remaining, completed = setup_study("core_engine", n_trials, sampler_override=sampler, pruner=pruner, is_pareto=is_pareto)
     if remaining == 0:
         best = get_best_trial(study)
@@ -2349,11 +2345,12 @@ def phase_core_engine(n_trials=100):
 
 
 def phase_io_toggles(n_trials=20, base_core_config=None):
-    """Phase 3: Categorical sweep of binary OS/memory toggles.
+    """LEGACY: Standalone I/O toggles sweep (kept for advanced menu / manual use).
 
-    These flags don't interact heavily with batch/thread sizing —
-    flash_attn is on or off, mlock either prevents page faults or doesn't.
-    20 trials is plenty to test the important combinations.
+    In the default pipeline, I/O toggles are now co-optimized inside
+    phase_core_engine via multivariate TPE. This standalone phase is only
+    useful if you want to re-sweep toggles in isolation after the main
+    pipeline has run, or for debugging.
 
     Parameters: flash_attn, mlock, no_mmap, numa, swa_full, repack, op_offload,
                 poll, poll_batch, prio, prio_batch, cpu_strict, cpu_strict_batch.
@@ -2739,7 +2736,6 @@ def phase_kv_quality(n_trials=15, base_config=None):
 
     print(f"\n[*] Running {remaining} trials (~{remaining * 45 // 60} min)...")
     pbar = create_phase_pbar(remaining, desc=label)
-    is_pareto = _config.get("pareto", False)
     callbacks = [TqdmUpdateCallback()]
     if not is_pareto:
         callbacks.append(GPStoppingCallback(baseline_score=best_score))

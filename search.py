@@ -91,7 +91,7 @@ class GPSampler(optuna.samplers.BaseSampler):
         # alpha passes per-observation noise to the GP, so the model knows which
         # measurements are reliable vs noisy (e.g., a trial with CV=10% vs CV=1%)
         kernel = ConstantKernel(1.0) * Matern(nu=2.5, length_scale=np.ones(X.shape[1])) + WhiteKernel(noise_level=0.1)
-        gp = GaussianProcessRegressor(kernel=kernel, alpha=alpha, n_restarts_optimizer=5, random_state=self._seed, normalize_y=True)
+        gp = GaussianProcessRegressor(kernel=kernel, alpha=alpha, n_restarts_optimizer=2, random_state=self._seed, normalize_y=True)
 
         try:
             with warnings.catch_warnings():

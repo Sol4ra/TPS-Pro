@@ -118,13 +118,22 @@ def recover_best_score(study, score_fn):
     return best
 
 
-def run_study_with_callbacks(study, objective, remaining, label, best_score, is_pareto=False):
-    """Run study.optimize with standard callbacks (progress bar + GP stopping)."""
+def run_study_with_callbacks(study, objective, remaining, label, best_score, is_pareto=False, timeout_seconds=None):
+    """Run study.optimize with standard callbacks (progress bar + GP stopping).
+
+    Args:
+        timeout_seconds: Optional hard timeout for the entire study. If None,
+            defaults to 90 minutes (enough for 100+ trials but prevents infinite hangs
+            if a single trial blocks forever).
+    """
+    if timeout_seconds is None:
+        timeout_seconds = 90 * 60  # 90 minutes default safety timeout
     pbar = create_phase_pbar(remaining, desc=label)
     callbacks = [TqdmUpdateCallback()]
     if not is_pareto:
         callbacks.append(GPStoppingCallback(baseline_score=best_score))
-    study.optimize(objective, n_trials=remaining, callbacks=callbacks, show_progress_bar=False)
+    study.optimize(objective, n_trials=remaining, callbacks=callbacks,
+                   show_progress_bar=False, timeout=timeout_seconds)
     close_phase_pbar()
 
 

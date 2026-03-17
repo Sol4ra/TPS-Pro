@@ -564,23 +564,39 @@ def _measure_quality_async(tasks, max_tokens, oai_params):
     return asyncio.run(_run())
 
 
-def _tokenize_count(text):
-    """Get exact token count from the server's /tokenize endpoint.
+_tokenize_ratio_cache = None  # cached chars-per-token ratio from first successful /tokenize call
 
-    Falls back to the 3.0 chars/token estimate if the server is unreachable
-    or the endpoint is unavailable.
+def _tokenize_count(text):
+    """Get token count from the server's /tokenize endpoint.
+
+    On the first call, measures the exact char/token ratio via /tokenize.
+    Subsequent calls use that ratio as a fast heuristic instead of hitting
+    the HTTP endpoint every time (saves ~15 round trips during NIAH binary search).
+
+    Falls back to the 3.0 chars/token estimate if the server is unreachable.
 
     Returns:
-        int: Exact token count, or estimated count as fallback.
+        int: Exact or estimated token count.
     """
+    global _tokenize_ratio_cache
+
+    # If we have a calibrated ratio, use it for O(1) estimation
+    if _tokenize_ratio_cache is not None:
+        return max(1, int(len(text) / _tokenize_ratio_cache))
+
+    # First call: get exact count and calibrate the ratio
     try:
         r = ctx.http.post(f"{ctx.server_url}/tokenize", json={"content": text}, timeout=10)
         if r.status_code == 200:
             tokens = r.json().get("tokens", [])
-            return len(tokens)
+            count = len(tokens)
+            if count > 0:
+                _tokenize_ratio_cache = len(text) / count  # chars per token
+            return count
     except (requests.RequestException, ValueError) as e:
         logger.debug("Tokenization endpoint failed, using estimate: %s", e)
     # Fallback: estimate at 3.0 chars/token
+    _tokenize_ratio_cache = 3.0
     return max(1, int(len(text) / 3.0))
 
 

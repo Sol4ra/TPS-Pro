@@ -29,7 +29,7 @@ SCORE_PP_BASELINE = 300     # t/s — reference prompt processing speed for norm
 QUALITY_WEIGHT_CORRECTNESS = 0.40  # did it get the MC answer right
 QUALITY_WEIGHT_CONFIDENCE = 0.40   # logprob of the answer token (how sure is it)
 QUALITY_WEIGHT_EFFICIENCY = 0.20   # TTFT (lower = better, breaks ties)
-QUALITY_EVAL_SEED = 0              # fixed seed for deterministic grading
+QUALITY_EVAL_SEED = 0              # seed passed to API (only affects non-greedy; temp=0 is deterministic regardless)
 QUALITY_TTFT_BASELINE = 500        # ms — reference TTFT for efficiency normalization
 
 # ============================================================
@@ -164,7 +164,7 @@ Think step by step, then answer with just the letter.""", "B", "reasoning"),
 (C) 5 hours 15 minutes
 (D) 21 hours
 
-Think step by step, then answer with just the letter.""", "A", "math"),
+Think step by step, then answer with just the letter.""", "A", "reasoning"),
 
     # STEM / MMLU-style (graduate-level)
     ("""In a double-slit experiment, the distance between the slits is halved while the wavelength of light used is doubled. What happens to the fringe spacing on the screen?

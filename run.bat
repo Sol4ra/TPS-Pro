@@ -34,7 +34,9 @@ echo     Done.
 echo.
 
 :run
-"%PYTHON%" -W ignore::FutureWarning -c "import sys; sys.path.insert(0, '..'); from llama_optimizer_2_v3_final.main import main; main()" %*
+cd /d "%~dp0.."
+"%PYTHON%" -W ignore::FutureWarning -m llama_optimizer_2_v3_final %*
+cd /d "%~dp0"
 pause
 goto :eof
 

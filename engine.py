@@ -525,10 +525,12 @@ def warmup_server():
     except requests.RequestException as e:
         logger.debug("Warmup request 1 failed: %s", e)
         return False
+    # Second warmup: prime speculation cache with 10 tokens (enough to populate
+    # n-gram lookup tables without wasting 5-10s on full 30-token generation)
     try:
         r = ctx.http.post(f"{ctx.server_url}/v1/chat/completions", json={
             "messages": [{"role": "user", "content": TPS_TEST_PROMPT}],
-            "max_tokens": 30, "temperature": 0.4,
+            "max_tokens": 10, "temperature": 0.4,
         }, timeout=60)
         if r.status_code >= 500:
             return False
@@ -571,6 +573,8 @@ def kill_server():
             pass
         ctx.active_server_proc = None
 
+    # Reset HTTP session — close() invalidates the urllib3 pool, so we must
+    # create a new Session. Connection pooling benefit is negligible for localhost.
     ctx.http.close()
     ctx.http = requests.Session()
 

@@ -100,8 +100,12 @@ def _build_large_prompt(max_ctx):
     return "\n\n".join(prompt_parts)
 
 
-def _measure_perf_large(n_predict=50):
+def _measure_perf_large(n_predict=150):
     """Benchmark TPS with a large prompt filling ~90% of context.
+
+    Generates 150 tokens (not just 50) for a more representative sustained
+    generation measurement under high context pressure. Short generations
+    can be dominated by startup overhead and don't reflect real-world usage.
 
     Returns dict with 'large_tps', 'large_prompt_tps', 'large_ttft' keys,
     or None if the measurement fails (e.g., server doesn't support /props).
@@ -190,7 +194,11 @@ def compute_score(perf, vram_used_mb=None, vram_total_mb=None):
         pp_factor = min((prompt_tps / SCORE_PP_BASELINE), 3.0) if prompt_tps > 0 else 0.0
         ttft_factor = min((SCORE_TTFT_BASELINE / ttft), 3.0) if ttft > 0 else 0.0
 
-        score = gen_tps * (0.60 + 0.25 * pp_factor + 0.15 * ttft_factor)
+        # Cap total multiplier at 1.5x so gen_tps remains the dominant signal.
+        # Without the cap, a config with 900 t/s pp could score gen_tps * 1.80,
+        # letting mediocre gen_tps configs outscore genuinely faster ones.
+        multiplier = min(0.60 + 0.25 * pp_factor + 0.15 * ttft_factor, 1.50)
+        score = gen_tps * multiplier
 
         # VRAM efficiency bonus: up to 5% boost for leaving headroom
         if vram_used_mb is not None and vram_total_mb is not None and vram_total_mb > 0:
@@ -404,7 +412,8 @@ def measure_perf_quick_gate(n_predict=5):
                 # promote configs that score well on prompt speed but poorly on gen.
                 pp_factor = min(prompt_tps / SCORE_PP_BASELINE, 3.0) if prompt_tps > 0 else 0.0
                 ttft_factor = min(SCORE_TTFT_BASELINE / max(1, ttft), 3.0)
-                gate_score = tps * (0.60 + 0.25 * pp_factor + 0.15 * ttft_factor)
+                multiplier = min(0.60 + 0.25 * pp_factor + 0.15 * ttft_factor, 1.50)
+                gate_score = tps * multiplier
                 return {
                     "tps": tps,
                     "ttft": ttft,
