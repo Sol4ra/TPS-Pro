@@ -1,11 +1,15 @@
 """Quality evaluation: quality gate, KL-divergence, perplexity, NIAH, MCQ."""
+import logging
 import math
 import random
 import re
 import time
 
+import requests
 
 from .state import ctx
+
+logger = logging.getLogger(__name__)
 from .constants import (
     QUALITY_TASKS, QUALITY_GATE_PROMPTS, QUALITY_GATE_SEED,
     QUALITY_GATE_N_PREDICT, QUALITY_GATE_UNCERTAIN_THRESHOLD,
@@ -125,7 +129,8 @@ def _collect_logprob_distribution(prompts, top_k=KL_DIV_TOP_K):
                         lp = entry.get("logprob", -100)
                         dist[tok] = lp
                     all_distributions.append(dist)
-        except Exception:
+        except (requests.RequestException, ValueError, KeyError) as e:
+            logger.debug("KL distribution collection failed for prompt: %s", e)
             continue
     return all_distributions if all_distributions else None
 
@@ -469,8 +474,8 @@ def _eval_single_task(prompt, correct_letter, category, max_tokens, oai_params):
 
             return {"correct": correct, "logprob": logprob, "ttft_ms": ttft_ms,
                     "answer": answer, "category": category}
-    except Exception:
-        pass
+    except (requests.RequestException, ValueError, KeyError) as e:
+        logger.debug("Quality eval request failed: %s", e)
 
     return {"correct": False, "logprob": None, "ttft_ms": None,
             "answer": None, "category": category}
@@ -536,8 +541,8 @@ def _measure_quality_async(tasks, max_tokens, oai_params):
                         logprob = _extract_answer_logprob(data, correct_letter)
                         return {"correct": correct, "logprob": logprob, "ttft_ms": ttft_ms,
                                 "answer": answer, "category": category}
-            except Exception:
-                pass
+            except (aiohttp.ClientError, ValueError, KeyError) as e:
+                logger.debug("Async quality eval failed: %s", e)
             return {"correct": False, "logprob": None, "ttft_ms": None,
                     "answer": None, "category": category}
 
@@ -548,6 +553,14 @@ def _measure_quality_async(tasks, max_tokens, oai_params):
             )
         return _score_quality_results(list(results))
 
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return pool.submit(asyncio.run, _run()).result()
     return asyncio.run(_run())
 
 
@@ -565,8 +578,8 @@ def _tokenize_count(text):
         if r.status_code == 200:
             tokens = r.json().get("tokens", [])
             return len(tokens)
-    except Exception:
-        pass
+    except (requests.RequestException, ValueError) as e:
+        logger.debug("Tokenization endpoint failed, using estimate: %s", e)
     # Fallback: estimate at 3.0 chars/token
     return max(1, int(len(text) / 3.0))
 

@@ -2136,6 +2136,7 @@ def phase_core_engine(n_trials=80):
 
     Parameters tuned: threads, threads_batch, batch_size, ubatch_size, n_cpu_moe (MoE only).
     """
+    from .trial_helpers import thermal_gate, recover_best_score
     phase_start_time = time.time()
     is_pareto = _config.get("pareto", False)
     label = "Core Engine (Multivariate TPE)"
@@ -2205,13 +2206,7 @@ def phase_core_engine(n_trials=80):
         study.enqueue_trial(seed)
 
     total_trials = completed + remaining
-    best_score = score_fn(baseline)
-    if completed > 0:
-        for t in study.trials:
-            if t.state == optuna.trial.TrialState.COMPLETE and t.user_attrs:
-                perf = {k: t.user_attrs.get(k, 0) for k in ["tps", "ttft", "prompt_tps", "total_ms"]}
-                if perf["tps"] > 0:
-                    best_score = max(best_score, score_fn(perf))
+    best_score = max(score_fn(baseline), recover_best_score(study, score_fn) if completed > 0 else 0)
 
     # VRAM-aware batch bounds (computed once, not per trial)
     all_batch_opts = [256, 512, 1024, 2048, 4096]
@@ -2229,9 +2224,7 @@ def phase_core_engine(n_trials=80):
 
     def objective(trial):
         nonlocal best_score
-
-        if check_thermal_throttle(threshold=85)[0]:
-            wait_for_cooldown(target_temp=75, timeout=120)
+        thermal_gate()
 
         # The 4-5 correlated parameters that multivariate TPE co-optimizes
         threads = trial.suggest_categorical("threads", thread_opts)
@@ -2306,93 +2299,28 @@ def phase_core_engine(n_trials=80):
 
             perf, promoted = measure_perf_adaptive(best_score)
 
+        from .trial_helpers import record_trial_attrs, finalize_trial
         tps = perf["tps"]
         score = score_fn(perf)
 
         if not use_bench:
             trial.report(score, step=1)
 
-        if perf.get("tps_std") is not None:
-            trial.set_user_attr("tps_std", perf["tps_std"])
-            trial.set_user_attr("tps_cv", perf.get("tps_cv", 0))
-
-        vram_mb = _get_vram_used_mb()
-        if vram_mb is not None:
-            trial.set_user_attr("vram_used_mb", vram_mb)
-            perf["vram_used_mb"] = vram_mb
-
-        trial.set_user_attr("tps", tps)
-        trial.set_user_attr("ttft", perf.get("ttft", 0))
-        trial.set_user_attr("prompt_tps", perf.get("prompt_tps", 0))
-        trial.set_user_attr("total_ms", perf.get("total_ms", 0))
-
-        if not is_pareto:
-            best_score = print_trial_result(trial.number, total_trials, tps, perf, params_short, best_score, final_score=score)
-            return score
-        else:
-            objectives = compute_pareto_objectives(perf, quality_factor=1.0)
-            print(f"  Trial {trial.number}: TPS={tps:.1f} VRAM={vram_mb or 0:.0f}MB | {params_short}")
-            return objectives
+        record_trial_attrs(trial, perf)
+        result, best_score = finalize_trial(trial, perf, params_short, best_score, total_trials, is_pareto, score=score)
+        return result
 
     est_minutes = remaining * (8 if use_bench else 25) // 60
     print(f"\n[*] Running {remaining} trials (+ {completed} done, ~{est_minutes} min)...")
     print(f"    Sampler: Multivariate TPE (learns threads×batch correlations)")
-    pbar = create_phase_pbar(remaining, desc=label)
-    callbacks = [TqdmUpdateCallback()]
-    if not is_pareto:
-        callbacks.append(GPStoppingCallback(baseline_score=best_score))
-    study.optimize(objective, n_trials=remaining, callbacks=callbacks, show_progress_bar=False)
-    close_phase_pbar()
+    from .trial_helpers import run_study_with_callbacks, print_phase_summary
+    run_study_with_callbacks(study, objective, remaining, label, best_score, is_pareto)
 
-    best = get_best_trial(study)
     baseline_score = score_fn(baseline)
-
-    print(f"\n{'=' * 60}")
-    print(f"  Core Engine — RESULTS")
-    print(f"{'=' * 60}")
-    print(f"  Baseline:    {baseline['tps']:.1f} t/s | Score: {baseline_score:.1f}")
-
-    if is_pareto:
-        pareto = extract_pareto_front(study)
-        print(f"\n  Pareto Front: {len(pareto)} configs")
-        print_pareto_front(pareto)
-        returned_params = best.params
-    else:
-        beat_baseline = best.value > baseline_score
-        if beat_baseline:
-            print(f"  Best Score:  {best.value:.1f} — beats baseline by {best.value - baseline_score:.1f}")
-            returned_params = best.params
-        else:
-            print(f"  Best Score:  {best.value:.1f} — below baseline ({baseline_score:.1f})")
-            returned_params = {k: base_config.get(k) for k in
-                               ["threads", "threads_batch", "batch_size", "ubatch_size", "n_cpu_moe"]
-                               if k in base_config}
-
-    print(f"  Best TPS:    {best.user_attrs.get('tps', 0):.1f} t/s")
-    print(f"  Best params:")
-    for k, v in returned_params.items():
-        print(f"    {k}: {v}")
-    importances = print_param_importance(study)
-
-    phase_elapsed = time.time() - phase_start_time
-    print(f"\n  Duration:    {phase_elapsed / 60:.1f} min")
-
-    results = {
-        "phase": "core_engine",
-        "baseline": baseline,
-        "baseline_score": baseline_score,
-        "beat_baseline": best.value > baseline_score if not is_pareto else True,
-        "best_tps": best.user_attrs.get("tps", 0),
-        "best_metrics": best.user_attrs,
-        "best_params": returned_params,
-        "param_importance": {k: round(v * 100, 1) for k, v in importances.items()},
-        "duration_minutes": round(phase_elapsed / 60, 1),
-        "all_trials": [
-            {"number": t.number, "tps": _trial_scalar_value(t), "metrics": t.user_attrs, "params": t.params}
-            for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE
-        ],
-    }
-    save_phase_results("core_engine", results)
+    param_keys = ["threads", "threads_batch", "batch_size", "ubatch_size", "n_cpu_moe"]
+    returned_params, _ = print_phase_summary(
+        "core_engine", study, baseline, baseline_score, phase_start_time,
+        is_pareto, score_fn=score_fn, param_keys=param_keys)
     return returned_params
 
 
@@ -2406,6 +2334,12 @@ def phase_io_toggles(n_trials=20, base_core_config=None):
     Parameters: flash_attn, mlock, no_mmap, numa, swa_full, repack, op_offload,
                 poll, poll_batch, prio, prio_batch, cpu_strict, cpu_strict_batch.
     """
+    from .trial_helpers import (
+        thermal_gate, run_server_trial, record_trial_attrs, finalize_trial,
+        recover_best_score, run_study_with_callbacks, print_phase_summary,
+        setup_baseline_server,
+    )
+
     phase_start_time = time.time()
     label = "I/O Toggles"
 
@@ -2428,19 +2362,10 @@ def phase_io_toggles(n_trials=20, base_core_config=None):
         print(f"\n[*] Locked core engine: t={base_core_config.get('threads')}/{base_core_config.get('threads_batch')} "
               f"b={base_core_config.get('batch_size')} ub={base_core_config.get('ubatch_size')}")
 
-    # Baseline with core engine params
-    print("\n[*] Starting baseline server...")
-    kill_server()
-    proc, status = _boot_server_with_jinja_recovery(base_config)
-    if status != "ok":
-        print("[!] Baseline failed")
-        if ctx.fail_fast:
-            raise BaselineFailure("Baseline server failed in I/O Toggles.")
+    baseline, baseline_score = setup_baseline_server(base_config, "I/O Toggles")
+    if baseline is None:
         return None
-    baseline = measure_perf(runs=3)
-    print(f"    Baseline: {baseline['tps']:.1f} t/s | Score: {compute_score(baseline):.1f}")
 
-    # Seed with sensible defaults
     if completed == 0:
         study.enqueue_trial({
             "flash_attn": "on", "mlock": True, "no_mmap": True,
@@ -2450,19 +2375,11 @@ def phase_io_toggles(n_trials=20, base_core_config=None):
         })
 
     total_trials = completed + remaining
-    best_score = compute_score(baseline)
-    if completed > 0:
-        for t in study.trials:
-            if t.state == optuna.trial.TrialState.COMPLETE and t.user_attrs:
-                perf = {k: t.user_attrs.get(k, 0) for k in ["tps", "ttft", "prompt_tps", "total_ms"]}
-                if perf["tps"] > 0:
-                    best_score = max(best_score, compute_score(perf))
+    best_score = max(baseline_score, recover_best_score(study, compute_score) if completed > 0 else 0)
 
     def objective(trial):
         nonlocal best_score
-
-        if check_thermal_throttle(threshold=85)[0]:
-            wait_for_cooldown(target_temp=75, timeout=120)
+        thermal_gate()
 
         config = {
             **base_config,
@@ -2491,91 +2408,18 @@ def phase_io_toggles(n_trials=20, base_core_config=None):
                         f"poll={config['poll']}/{config['poll_batch']} "
                         f"prio={config.get('prio', 0)}/{config.get('prio_batch', 0)}")
 
-        print(f"\n  Trial {trial.number}: server | {params_short}")
-        kill_server()
-        proc = start_server(config)
-        status = wait_for_server(proc=proc)
-        if status == "oom":
-            kill_server()
-            raise optuna.exceptions.TrialPruned()
-        elif status != "ok":
-            _server_start_failed(trial.number, params_short, proc)
+        perf, score = run_server_trial(trial, config, params_short, best_score, is_pareto)
+        if perf is None:
             return (0.0, -99999.0, 0.0) if is_pareto else 0.0
-
-        gate = measure_perf_quick_gate(n_predict=5)
-        if gate and best_score > 0:
-            gate_score = gate.get("gate_score", 0)
-            trial.report(gate_score, step=0)
-            if trial.should_prune():
-                raise optuna.exceptions.TrialPruned()
-
-        perf, promoted = measure_perf_adaptive(best_score)
-        tps = perf["tps"]
-        score = compute_score(perf)
-        trial.report(score, step=1)
-
-        if perf.get("tps_std") is not None:
-            trial.set_user_attr("tps_std", perf["tps_std"])
-
-        trial.set_user_attr("tps", tps)
-        trial.set_user_attr("ttft", perf.get("ttft", 0))
-        trial.set_user_attr("prompt_tps", perf.get("prompt_tps", 0))
-        trial.set_user_attr("total_ms", perf.get("total_ms", 0))
-
-        if is_pareto:
-            return compute_pareto_objectives(perf, quality_factor=1.0)
-
-        best_score = print_trial_result(trial.number, total_trials, tps, perf, params_short, best_score)
-        return score
+        record_trial_attrs(trial, perf)
+        result, best_score = finalize_trial(trial, perf, params_short, best_score, total_trials, is_pareto)
+        return result
 
     print(f"\n[*] Running {remaining} trials (~{remaining * 25 // 60} min)...")
-    pbar = create_phase_pbar(remaining, desc=label)
-    callbacks = [TqdmUpdateCallback()]
-    if not is_pareto:
-        callbacks.append(GPStoppingCallback(baseline_score=best_score))
-    study.optimize(objective, n_trials=remaining, callbacks=callbacks, show_progress_bar=False)
-    close_phase_pbar()
+    run_study_with_callbacks(study, objective, remaining, label, best_score, is_pareto)
 
-    best = get_best_trial(study)
-    baseline_score = compute_score(baseline)
-
-    print(f"\n{'=' * 60}")
-    print(f"  I/O Toggles — RESULTS")
-    print(f"{'=' * 60}")
-    print(f"  Baseline:    {baseline['tps']:.1f} t/s | Score: {baseline_score:.1f}")
-
-    best_val = _trial_scalar_value(best) or 0
-    beat_baseline = best_val > baseline_score
-    if beat_baseline:
-        print(f"  Best Score:  {best_val:.1f} — beats baseline by {best_val - baseline_score:.1f}")
-        returned_params = best.params
-    else:
-        print(f"  Best Score:  {best_val:.1f} — below baseline, keeping defaults")
-        returned_params = {}
-
-    print(f"  Best TPS:    {best.user_attrs.get('tps', 0):.1f} t/s")
-    for k, v in returned_params.items():
-        print(f"    {k}: {v}")
-    importances = print_param_importance(study)
-
-    phase_elapsed = time.time() - phase_start_time
-    print(f"\n  Duration:    {phase_elapsed / 60:.1f} min")
-
-    results = {
-        "phase": "io_toggles",
-        "baseline": baseline,
-        "baseline_score": baseline_score,
-        "beat_baseline": beat_baseline,
-        "best_tps": best.user_attrs.get("tps", 0),
-        "best_params": returned_params,
-        "param_importance": {k: round(v * 100, 1) for k, v in importances.items()},
-        "duration_minutes": round(phase_elapsed / 60, 1),
-        "all_trials": [
-            {"number": t.number, "tps": _trial_scalar_value(t), "metrics": t.user_attrs, "params": t.params}
-            for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE
-        ],
-    }
-    save_phase_results("io_toggles", results)
+    returned_params, _ = print_phase_summary(
+        "io_toggles", study, baseline, baseline_score, phase_start_time, is_pareto)
     return returned_params
 
 
@@ -2591,6 +2435,12 @@ def phase_speculation(n_trials=40, base_config=None):
                 draft_max, draft_min, draft_p_min, lookup_cache_dynamic.
     If a draft model is configured, sweeps model_draft params instead.
     """
+    from .trial_helpers import (
+        thermal_gate, run_server_trial, record_trial_attrs, finalize_trial,
+        recover_best_score, run_study_with_callbacks, print_phase_summary,
+        setup_baseline_server,
+    )
+
     phase_start_time = time.time()
     label = "Speculative Decoding"
 
@@ -2609,25 +2459,14 @@ def phase_speculation(n_trials=40, base_config=None):
     if base_config is None:
         base_config = dict(ctx.naked_engine)
 
-    # Baseline WITHOUT speculation
-    print("\n[*] Starting baseline server (no speculation)...")
-    kill_server()
-    proc, status = _boot_server_with_jinja_recovery(base_config)
-    if status != "ok":
-        print("[!] Baseline failed")
-        if ctx.fail_fast:
-            raise BaselineFailure("Baseline server failed in Speculation.")
+    baseline, baseline_score = setup_baseline_server(base_config, "Speculation")
+    if baseline is None:
         return None
-    baseline = measure_perf(runs=3)
-    baseline_score = compute_score(baseline)
-    print(f"    Baseline (no spec): {baseline['tps']:.1f} t/s | Score: {baseline_score:.1f}")
 
-    # Check if draft model is available
     draft_model = _config.get("draft_model")
     if draft_model:
         print(f"    Draft model: {Path(draft_model).name}")
 
-    # Seed with known-good speculation configs
     if completed == 0:
         study.enqueue_trial({
             "spec_type": "ngram-map-k4v",
@@ -2647,19 +2486,11 @@ def phase_speculation(n_trials=40, base_config=None):
         })
 
     total_trials = completed + remaining
-    best_score = baseline_score
-    if completed > 0:
-        for t in study.trials:
-            if t.state == optuna.trial.TrialState.COMPLETE and t.user_attrs:
-                perf = {k: t.user_attrs.get(k, 0) for k in ["tps", "ttft", "prompt_tps", "total_ms"]}
-                if perf["tps"] > 0:
-                    best_score = max(best_score, compute_score(perf))
+    best_score = max(baseline_score, recover_best_score(study, compute_score) if completed > 0 else 0)
 
     def objective(trial):
         nonlocal best_score
-
-        if check_thermal_throttle(threshold=85)[0]:
-            wait_for_cooldown(target_temp=75, timeout=120)
+        thermal_gate()
 
         spec_opts = ["ngram-simple", "ngram-cache", "ngram-map-k", "ngram-map-k4v", "ngram-mod"]
         if draft_model:
@@ -2673,7 +2504,6 @@ def phase_speculation(n_trials=40, base_config=None):
         draft_p_min = trial.suggest_float("draft_p_min", 0.3, 0.99)
         use_lookup_cache = trial.suggest_categorical("use_lookup_cache", [True, False])
 
-        # Pre-boot pruning
         if draft_min >= draft_max:
             raise optuna.exceptions.TrialPruned()
 
@@ -2697,97 +2527,24 @@ def phase_speculation(n_trials=40, base_config=None):
         if cached is not None:
             return cached
 
-        # Delete lookup cache to prevent temporal leakage between trials
         if use_lookup_cache and ctx.lookup_cache_file and Path(ctx.lookup_cache_file).exists():
             Path(ctx.lookup_cache_file).unlink()
 
         params_short = (f"{spec_type} n={spec_ngram_n} m={spec_ngram_m} "
                         f"draft={draft_max}/{draft_min} p={draft_p_min:.2f}")
 
-        print(f"\n  Trial {trial.number}: server | {params_short}")
-        kill_server()
-        proc = start_server(config)
-        status = wait_for_server(proc=proc)
-        if status == "oom":
-            kill_server()
-            raise optuna.exceptions.TrialPruned()
-        elif status != "ok":
-            _server_start_failed(trial.number, params_short, proc)
+        perf, score = run_server_trial(trial, config, params_short, best_score, is_pareto)
+        if perf is None:
             return (0.0, -99999.0, 0.0) if is_pareto else 0.0
-
-        gate = measure_perf_quick_gate(n_predict=5)
-        if gate and best_score > 0:
-            gate_score = gate.get("gate_score", 0)
-            trial.report(gate_score, step=0)
-            if trial.should_prune():
-                raise optuna.exceptions.TrialPruned()
-
-        perf, promoted = measure_perf_adaptive(best_score)
-        tps = perf["tps"]
-        score = compute_score(perf)
-        trial.report(score, step=1)
-
-        if perf.get("tps_std") is not None:
-            trial.set_user_attr("tps_std", perf["tps_std"])
-
-        trial.set_user_attr("tps", tps)
-        trial.set_user_attr("ttft", perf.get("ttft", 0))
-        trial.set_user_attr("prompt_tps", perf.get("prompt_tps", 0))
-        trial.set_user_attr("total_ms", perf.get("total_ms", 0))
-
-        if is_pareto:
-            return compute_pareto_objectives(perf, quality_factor=1.0)
-
-        best_score = print_trial_result(trial.number, total_trials, tps, perf, params_short, best_score)
-        return score
+        record_trial_attrs(trial, perf)
+        result, best_score = finalize_trial(trial, perf, params_short, best_score, total_trials, is_pareto)
+        return result
 
     print(f"\n[*] Running {remaining} trials (~{remaining * 20 // 60} min)...")
-    pbar = create_phase_pbar(remaining, desc=label)
-    callbacks = [TqdmUpdateCallback()]
-    if not is_pareto:
-        callbacks.append(GPStoppingCallback(baseline_score=best_score))
-    study.optimize(objective, n_trials=remaining, callbacks=callbacks, show_progress_bar=False)
-    close_phase_pbar()
+    run_study_with_callbacks(study, objective, remaining, label, best_score, is_pareto)
 
-    best = get_best_trial(study)
-
-    print(f"\n{'=' * 60}")
-    print(f"  Speculation — RESULTS")
-    print(f"{'=' * 60}")
-    print(f"  No-spec baseline: {baseline['tps']:.1f} t/s")
-
-    best_val = best.values[0] if is_pareto and best.values else best.value
-    beat_baseline = best_val > baseline_score
-    if beat_baseline:
-        speedup = (best.user_attrs.get("tps", 0) / max(baseline["tps"], 0.1) - 1) * 100
-        print(f"  Best with spec: {best.user_attrs.get('tps', 0):.1f} t/s ({speedup:+.0f}% speedup)")
-        returned_params = best.params
-    else:
-        print(f"  [!] No speculation config beat naked baseline — speculation disabled")
-        returned_params = {}
-
-    for k, v in returned_params.items():
-        print(f"    {k}: {v}")
-    importances = print_param_importance(study)
-
-    phase_elapsed = time.time() - phase_start_time
-    print(f"\n  Duration:    {phase_elapsed / 60:.1f} min")
-
-    results = {
-        "phase": "speculation",
-        "baseline": baseline,
-        "baseline_score": baseline_score,
-        "beat_baseline": beat_baseline,
-        "best_tps": best.user_attrs.get("tps", 0),
-        "best_params": returned_params,
-        "param_importance": {k: round(v * 100, 1) for k, v in importances.items()},
-        "duration_minutes": round(phase_elapsed / 60, 1),
-        "all_trials": [
-            {"number": t.number, "tps": _trial_scalar_value(t), "metrics": t.user_attrs, "params": t.params}
-            for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE
-        ],
-    }
-    save_phase_results("speculation", results)
+    returned_params, _ = print_phase_summary(
+        "speculation", study, baseline, baseline_score, phase_start_time, is_pareto)
     return returned_params
 
 

@@ -4,6 +4,7 @@ Server lifecycle (start/kill/wait), llama-bench integration, LogTee, PhaseTimer.
 
 import csv
 import io
+import logging
 import os
 import random
 import subprocess
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 from .state import ctx, _config, get_preset_trials
 from .constants import TPS_TEST_PROMPT
@@ -296,8 +299,8 @@ def _parse_bench_csv(csv_output):
                 "ttft": pp_total_ns / 1e6 if pp_total_ns else 0.0,
                 "total_ms": (pp_total_ns + gen_total_ns) / 1e6,
             }
-    except Exception:
-        pass
+    except (subprocess.SubprocessError, csv.Error, ValueError, KeyError) as e:
+        logger.debug("Bench CSV parsing failed: %s", e)
     return None
 
 
@@ -321,7 +324,8 @@ def run_bench_trial(engine_config, n_prompt=512, n_gen=128, repetitions=3):
         return _parse_bench_csv(result.stdout)
     except subprocess.TimeoutExpired:
         return None
-    except Exception:
+    except (OSError, subprocess.SubprocessError) as e:
+        logger.debug("Bench trial failed: %s", e)
         return None
 
 
@@ -516,9 +520,8 @@ def warmup_server():
         }, timeout=60)
         if r.status_code >= 500:
             return False
-    except (requests.ConnectionError, requests.Timeout):
-        return False
-    except Exception:
+    except requests.RequestException as e:
+        logger.debug("Warmup request 1 failed: %s", e)
         return False
     try:
         r = ctx.http.post(f"{ctx.server_url}/v1/chat/completions", json={
@@ -527,9 +530,8 @@ def warmup_server():
         }, timeout=60)
         if r.status_code >= 500:
             return False
-    except (requests.ConnectionError, requests.Timeout):
-        return False
-    except Exception:
+    except requests.RequestException as e:
+        logger.debug("Warmup request 2 failed: %s", e)
         return False
     if ctx.vram_total_mb is None:
         _init_vram_info()

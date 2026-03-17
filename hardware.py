@@ -2,6 +2,7 @@
 GPU detection, VRAM management, thermal monitoring, and competing process cleanup.
 """
 
+import logging
 import os
 import signal
 import subprocess
@@ -9,6 +10,8 @@ import sys
 import time
 
 from .state import ctx
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -35,7 +38,10 @@ def detect_gpus():
             })
         pynvml.nvmlShutdown()
         return gpus
-    except Exception:
+    except ImportError:
+        return []
+    except Exception as e:
+        logger.debug("GPU detection failed: %s", e)
         return []
 
 
@@ -142,11 +148,14 @@ def check_thermal_throttle(threshold=85):
             try:
                 temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
                 max_temp = max(max_temp, temp)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Could not read GPU %d temperature: %s", i, e)
         pynvml.nvmlShutdown()
         return max_temp >= threshold, max_temp
-    except Exception:
+    except ImportError:
+        return False, 0
+    except Exception as e:
+        logger.debug("Thermal check failed: %s", e)
         return False, 0
 
 

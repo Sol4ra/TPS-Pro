@@ -12,7 +12,7 @@ from pathlib import Path
 import optuna
 import requests
 
-from .state import ctx, _config, _DEFAULTS, create_context, _detect_numa_nodes
+from .state import ctx, _config, _DEFAULTS, create_context, _detect_numa_nodes, initialize
 from .models import detect_model_layers
 from .constants import SCORE_VERSION
 from .hardware import detect_gpus
@@ -1655,7 +1655,9 @@ def launch_dashboard():
 
 
 def main():
-    global _config, _dashboard_proc
+    global _dashboard_proc
+
+    initialize()  # Parse CLI args & populate ctx/_config (no-op if already done)
 
     from .search import ensure_results_dir
     from .engine import is_server_running
@@ -1665,7 +1667,8 @@ def main():
     if _needs_setup():
         new_config = first_run_setup()
         # Merge new config into defaults and rebuild context
-        _config = copy.deepcopy(_DEFAULTS)
+        _config.clear()
+        _config.update(copy.deepcopy(_DEFAULTS))
         for k, v in new_config.items():
             if isinstance(v, dict) and isinstance(_config.get(k), dict):
                 _config[k].update(v)
@@ -1731,8 +1734,13 @@ def main():
     if _config.get("dashboard"):
         _dashboard_proc = launch_dashboard()
 
-    # Kill competing GPU processes to free VRAM
-    kill_competing_processes()
+    # Kill competing GPU processes to free VRAM (opt-in only)
+    if _config.get("kill_competing"):
+        kill_competing_processes()
+    else:
+        gpus_pre = detect_gpus()
+        if gpus_pre and any(g["vram_free_gb"] < g["vram_total_gb"] * 0.5 for g in gpus_pre):
+            print("  [*] Tip: Use --kill-competing to free GPU memory from other processes")
 
     # Detect GPUs
     gpus = detect_gpus()

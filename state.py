@@ -102,7 +102,7 @@ def _detect_numa_nodes():
                         for i, p in enumerate(parts):
                             if p == "available:" and i + 1 < len(parts):
                                 return int(parts[i + 1])
-    except Exception:
+    except (OSError, subprocess.SubprocessError, ValueError):
         pass
     return 1
 
@@ -273,6 +273,8 @@ def _load_config():
     parser.add_argument("--pareto", action="store_true", help="Enable multi-objective Pareto optimization")
     parser.add_argument("--simulate-users", type=int, default=0, metavar="N",
                         help="Concurrent user load test with N simultaneous users")
+    parser.add_argument("--kill-competing", action="store_true",
+                        help="Kill competing GPU processes (>500MB VRAM) before optimizing")
     args, _ = parser.parse_known_args()
 
     config = copy.deepcopy(_DEFAULTS)
@@ -323,6 +325,7 @@ def _load_config():
     config["dashboard"] = args.dashboard
     config["pareto"] = args.pareto
     config["simulate_users"] = args.simulate_users
+    config["kill_competing"] = args.kill_competing
 
     # Layer 3: Auto-detect hardware if not explicitly set
     hw = config["hardware"]
@@ -343,8 +346,34 @@ def _load_config():
 
 
 # ============================================================
-# Module-level initialization
+# Module-level initialization (lazy)
 # ============================================================
 
-_config = _load_config()
-ctx = create_context(_config)
+# Sentinel instances — populated in-place by initialize().
+# Other modules do `from .state import ctx, _config`, so we must update
+# the *same objects* rather than rebinding the names.
+ctx = AppContext()
+_config = {}
+_initialized = False
+
+
+def initialize():
+    """Parse CLI args, load config, and populate the module-level `ctx` and `_config`.
+
+    Safe to call multiple times — subsequent calls are no-ops.
+    Must be called once before the optimizer pipeline runs
+    (typically from main.py's main()).
+    """
+    global _initialized
+    if _initialized:
+        return ctx
+    config = _load_config()
+    # Update _config dict in-place so all `from .state import _config` refs stay valid.
+    _config.update(config)
+    fresh = create_context(config)
+    # Copy every field into the existing ctx so all `from .state import ctx`
+    # references stay valid.
+    for f in ctx.__dataclass_fields__:
+        setattr(ctx, f, getattr(fresh, f))
+    _initialized = True
+    return ctx

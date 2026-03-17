@@ -2,8 +2,11 @@
 Model classification, GGUF metadata reading, architecture detection, and quantization recommendations.
 """
 
+import logging
 import struct
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def classify_model(model_path):
@@ -71,7 +74,8 @@ def read_gguf_metadata(model_path):
                 val = read_value(vtype)
                 metadata[key] = val
             return metadata
-    except Exception:
+    except (OSError, struct.error, UnicodeDecodeError, ValueError) as e:
+        logger.debug("GGUF metadata read failed for %s: %s", model_path, e)
         return {}
 
 
@@ -102,8 +106,8 @@ def _detect_gguf_architecture(model_path):
                 "default_experts": int(num_used) if num_used else int(num_experts),
                 "max_experts": int(num_experts),
             }
-    except Exception as e:
-        print(f"  [!] Could not read GGUF metadata: {e}")
+    except (OSError, struct.error, ValueError) as e:
+        logger.warning("Could not read GGUF metadata for architecture detection: %s", e)
     return arch_info
 
 

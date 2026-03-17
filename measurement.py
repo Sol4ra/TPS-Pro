@@ -1,9 +1,14 @@
 """Performance measurement, scoring, and concurrent load testing."""
 import asyncio
+import logging
 import math
 import time
 
+import requests
+
 from .state import ctx, _config
+
+logger = logging.getLogger(__name__)
 from .constants import (
     SCORE_VERSION, SCORE_TTFT_BASELINE, SCORE_PP_BASELINE,
     ADAPTIVE_THRESHOLD, CV_TARGET, CV_MIN_RUNS, CV_MAX_RUNS,
@@ -37,8 +42,8 @@ def _get_actual_ctx():
             n_ctx = data.get("n_ctx") or data.get("default_generation_settings", {}).get("n_ctx")
             if n_ctx and int(n_ctx) > 0:
                 return int(n_ctx)
-    except Exception:
-        pass
+    except (requests.RequestException, ValueError, KeyError) as e:
+        logger.debug("Context detection via /props failed: %s", e)
 
     # Fallback: send a huge prompt, parse error for context limit
     try:
@@ -49,13 +54,12 @@ def _get_actual_ctx():
         }, timeout=10)
         if r.status_code != 200:
             err = r.text
-            # Look for patterns like "context length is 32768" or "n_ctx = 32768"
             import re
             m = re.search(r'(?:context.*?|n_ctx\s*[=:]\s*)(\d{3,})', err)
             if m:
                 return int(m.group(1))
-    except Exception:
-        pass
+    except (requests.RequestException, ValueError) as e:
+        logger.debug("Context detection via error parsing failed: %s", e)
 
     return None
 
@@ -232,7 +236,7 @@ def extract_pareto_front(study):
     """
     try:
         pareto_trials = study.best_trials  # NSGA-II provides this
-    except Exception:
+    except (RuntimeError, ValueError):
         return []
     # Sort by TPS descending
     return sorted(pareto_trials, key=lambda t: t.values[0], reverse=True)
@@ -389,8 +393,8 @@ def measure_perf_quick_gate(n_predict=5):
                     "total_ms": ttft + timings.get("predicted_ms", 0),
                     "gate_score": prompt_tps * 0.6 + (1000.0 / max(1, ttft)) * 0.4,
                 }
-    except Exception:
-        pass
+    except (requests.RequestException, ValueError, KeyError) as e:
+        logger.debug("Quick gate measurement failed: %s", e)
     return None
 
 
@@ -527,8 +531,18 @@ def measure_concurrent_load(n_users=4, n_predict=50):
             return await asyncio.gather(*tasks)
 
     try:
-        results = asyncio.run(_run_load_test())
-    except Exception:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                results = pool.submit(asyncio.run, _run_load_test()).result()
+        else:
+            results = asyncio.run(_run_load_test())
+    except (RuntimeError, OSError) as e:
+        logger.debug("Concurrent load test failed: %s", e)
         return None
 
     successful = [r for r in results if r.get("success")]

@@ -1,10 +1,13 @@
 """Optuna study management, callbacks, trial scoring, and phase result I/O."""
 import json
+import logging
 import sys
 import time
 from pathlib import Path
 
 import warnings
+
+logger = logging.getLogger(__name__)
 
 import numpy as np
 import optuna
@@ -94,7 +97,8 @@ class GPSampler(optuna.samplers.BaseSampler):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 gp.fit(X, y)
-        except Exception:
+        except (np.linalg.LinAlgError, ValueError) as e:
+            logger.debug("GP fit failed, falling back to random sampling: %s", e)
             return {}  # GP fit failed, fall back to random
 
         # Generate random candidates and pick the one with highest EI
@@ -259,7 +263,8 @@ class GPStoppingCallback:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 gp.fit(X, y)
-        except Exception:
+        except (np.linalg.LinAlgError, ValueError) as e:
+            logger.debug("GP stopping callback fit failed: %s", e)
             return  # GP fit failed, continue with trials
 
         candidates = self._rng.uniform(0, 1, size=(self._n_candidates, len(param_names)))
@@ -489,14 +494,14 @@ def print_param_importance(study):
 
     try:
         importances = optuna.importance.get_param_importances(study)
-    except Exception as e:
+    except (RuntimeError, ValueError) as e:
         # Fallback to mean decrease impurity if fANOVA fails
         try:
             from optuna.importance import MeanDecreaseImpurityImportanceEvaluator
             importances = optuna.importance.get_param_importances(
                 study, evaluator=MeanDecreaseImpurityImportanceEvaluator()
             )
-        except Exception:
+        except (RuntimeError, ValueError, ImportError):
             print(f"\n  (Could not compute parameter importance: {e})")
             return {}
 
