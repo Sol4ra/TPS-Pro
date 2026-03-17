@@ -1,0 +1,9 @@
+optuna
+requests
+numpy
+scipy
+scikit-learn
+pynvml
+psutil
+tqdm
+aiohttp
