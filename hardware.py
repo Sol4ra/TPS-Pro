@@ -52,11 +52,25 @@ def _init_vram_info():
         ctx.vram_total_mb = sum(g["vram_total_gb"] * 1024 for g in gpus)
 
 
-def _get_vram_used_mb():
-    """Snapshot current VRAM usage in MB. Returns float or None."""
+_vram_cache_time = 0.0
+_vram_cache_value = None
+
+def _get_vram_used_mb(cache_seconds=2.0):
+    """Snapshot current VRAM usage in MB. Returns float or None.
+
+    Caches the result for `cache_seconds` to avoid reinitializing pynvml
+    on every call (detect_gpus does nvmlInit/Shutdown each time).
+    During adaptive measurement (3-5 runs per trial), this saves ~10 pynvml cycles.
+    """
+    global _vram_cache_time, _vram_cache_value
+    now = time.time()
+    if now - _vram_cache_time < cache_seconds and _vram_cache_value is not None:
+        return _vram_cache_value
     gpus = detect_gpus()
     if gpus:
-        return sum((g["vram_total_gb"] - g["vram_free_gb"]) * 1024 for g in gpus)
+        _vram_cache_value = sum((g["vram_total_gb"] - g["vram_free_gb"]) * 1024 for g in gpus)
+        _vram_cache_time = now
+        return _vram_cache_value
     return None
 
 

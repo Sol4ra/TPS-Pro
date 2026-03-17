@@ -1728,9 +1728,6 @@ def phase_memory(n_trials=60, phase_name="memory", base_compute_config=None, see
     return returned_params
 
 
-    # NOTE: _NIAH_NEEDLES and _NIAH_FILLER_BLOCKS are imported from constants.py (line 23)
-
-
 # ============================================================
 # Quality / Sampling
 # ============================================================
@@ -1822,11 +1819,9 @@ def phase3(n_trials=80):
     })
     print(f"    Baseline: {baseline_score:.1f}% (3-signal: correctness×{QUALITY_WEIGHT_CORRECTNESS:.0%} + confidence×{QUALITY_WEIGHT_CONFIDENCE:.0%} + efficiency×{QUALITY_WEIGHT_EFFICIENCY:.0%})")
 
-    # Quality phase uses TPESampler instead of GPSampler because mirostat creates
-    # a conditional search space (temperature only exists when mirostat=0).
-    # intersection_search_space drops conditional params, blinding the GP.
-    # TPE handles branching conditionals natively.
-    study, remaining, completed = setup_study("quality", n_trials, sampler_override=optuna.samplers.TPESampler(seed=42))
+    # Multivariate TPE learns correlations between sampling params (e.g., temperature × top_p).
+    # It handles mirostat's conditional search space natively — missing params are ignored.
+    study, remaining, completed = setup_study("quality", n_trials)
     if remaining == 0:
         return study.best_trial.params
 
@@ -1945,11 +1940,6 @@ def phase3(n_trials=80):
     save_phase_results("quality", results)
 
     return returned_params
-
-
-# ============================================================
-# Tensor Split Phase (Multi-GPU)
-# ============================================================
 
 
 # ============================================================
@@ -2117,24 +2107,31 @@ def phase_topology_sweep(gpus, base_split, base_config=None, step=0.02, n_runs=2
 # ============================================================
 # ============================================================
 # Pyramid Pipeline Phases
-# Phase 2: Core Tensor Engine — multivariate TPE co-optimizes correlated params
-# Phase 3: System I/O Toggles — categorical sweep of binary flags
-# Phase 4: Speculative Decoding — isolated after core engine is locked
-# Phase 5: KV Cache + Quality — degradation testing with PPL/NIAH
-# Phase 6: Workload Simulation — hot-cache TTFT + concurrent load
+# Phase 2: Core Engine + I/O — multivariate TPE co-optimizes all correlated params
+# Phase 3: Speculative Decoding — isolated after core engine is locked
+# Phase 4: KV Cache + Quality — degradation testing with PPL/NIAH
+# Phase 5: Workload Simulation — hot-cache TTFT + concurrent load
 # ============================================================
 
-def phase_core_engine(n_trials=80):
+def phase_core_engine(n_trials=100):
     """Phase 2: Multivariate co-optimization of all correlated engine parameters.
 
-    Combines the old Compute + Memory + MoE into one phase using Optuna's
+    Combines compute, memory, and I/O toggles into one phase using Optuna's
     multivariate TPE sampler, which learns cross-parameter correlations
-    (e.g., threads×batch_size×n_cpu_moe interactions).
+    (e.g., threads×batch_size, flash_attn×batch_size, poll×threads).
 
-    For dense models, uses llama-bench (fast). For MoE, falls back to HTTP server
-    because n_cpu_moe requires --override-kv which bench doesn't support.
+    Merging I/O toggles here (instead of a separate phase) lets TPE discover
+    interactions like flash_attn×kv_cache_type and cpu_strict×threads that
+    coordinate descent would miss.
 
-    Parameters tuned: threads, threads_batch, batch_size, ubatch_size, n_cpu_moe (MoE only).
+    For dense models, uses llama-bench for core params (fast), but falls back
+    to HTTP server when I/O toggles need real server measurement.
+    For MoE, always uses HTTP server (n_cpu_moe requires --override-kv).
+
+    Parameters tuned: threads, threads_batch, batch_size, ubatch_size,
+                       flash_attn, mlock, no_mmap, swa_full, repack, op_offload,
+                       poll, poll_batch, prio, prio_batch, cpu_strict, cpu_strict_batch,
+                       numa (multi-NUMA only), n_cpu_moe (MoE only).
     """
     from .trial_helpers import thermal_gate, recover_best_score
     phase_start_time = time.time()
@@ -2161,48 +2158,50 @@ def phase_core_engine(n_trials=80):
         print_param_importance(study)
         return best.params
 
-    # Bench is only viable for dense models (MoE needs server for --override-kv)
-    use_bench = ctx.bench_path is not None and not ctx.is_moe
-    if ctx.is_moe and ctx.bench_path:
-        print("    [bench] Skipped — MoE model requires HTTP server for n_cpu_moe")
+    # I/O toggles need real server measurement (bench can't test mlock, poll, etc.)
+    # so we always use HTTP server for this merged phase.
+    use_bench = False
+    print("    [*] Using HTTP server (I/O toggles require live server measurement)")
 
-    # Baseline — include flash_attn and f16 KV to match trial conditions
+    # Baseline — start with flash_attn on and f16 KV as reference point
     base_config = {**ctx.naked_engine, "flash_attn": "on", "kv_cache_type": "f16"}
-    if use_bench:
-        print("\n[*] Running baseline via llama-bench...")
-        baseline = run_bench_trial(base_config, repetitions=3)
-        if not baseline or baseline.get("error"):
-            print("[!] Baseline bench failed, falling back to HTTP server...")
-            use_bench = False
-    if not use_bench:
-        print("\n[*] Starting baseline server...")
-        kill_server()
-        proc, status = _boot_server_with_jinja_recovery(base_config)
-        if status != "ok":
-            print("[!] Baseline server failed to start")
-            if ctx.fail_fast:
-                raise BaselineFailure("Baseline server failed in Core Engine.")
-            return None
-        baseline = measure_perf(runs=3)
-    score_fn = (lambda p: _bench_score(p, baseline)) if use_bench else compute_score
-    if use_bench:
-        print(f"    Baseline: {baseline['tps']:.1f} t/s | Score: {score_fn(baseline):.1f}")
-        print(f"    [bench] Scoring: TPS × (0.85 + 0.15 × pp_ratio)")
-    else:
-        print(f"    Baseline: {baseline['tps']:.1f} t/s | pp: {baseline['prompt_tps']:.0f} t/s | "
-              f"TTFT: {baseline['ttft']:.0f}ms | Score: {score_fn(baseline):.1f}")
+    print("\n[*] Starting baseline server...")
+    kill_server()
+    proc, status = _boot_server_with_jinja_recovery(base_config)
+    if status != "ok":
+        print("[!] Baseline server failed to start")
+        if ctx.fail_fast:
+            raise BaselineFailure("Baseline server failed in Core Engine.")
+        return None
+    baseline = measure_perf(runs=3)
+    score_fn = compute_score
+    print(f"    Baseline: {baseline['tps']:.1f} t/s | pp: {baseline['prompt_tps']:.0f} t/s | "
+          f"TTFT: {baseline['ttft']:.0f}ms | Score: {score_fn(baseline):.1f}")
 
-    # Seed trial 0 with a known-good starting config
+    # Seed trial 0 with a known-good starting config (includes I/O toggles)
     if completed == 0:
         seed = {
             "threads": min(8, ctx.max_threads),
             "threads_batch": ctx.max_threads,
             "batch_size": 512,
             "ubatch_size": 256,
+            # I/O toggles — sensible defaults
+            "flash_attn": "on",
+            "mlock": True,
+            "no_mmap": True,
+            "swa_full": False,
+            "repack": False,
+            "op_offload": False,
+            "poll": 0,
+            "poll_batch": 50,
+            "prio": 0,
+            "prio_batch": 0,
+            "cpu_strict": 1,
+            "cpu_strict_batch": 1,
         }
         if ctx.is_moe:
             seed["n_cpu_moe"] = ctx.moe_sweep_center
-        print(f"[*] Seeding Trial 0 with balanced config: {seed}")
+        print(f"[*] Seeding Trial 0 with balanced config")
         study.enqueue_trial(seed)
 
     total_trials = completed + remaining
@@ -2226,11 +2225,26 @@ def phase_core_engine(n_trials=80):
         nonlocal best_score
         thermal_gate()
 
-        # The 4-5 correlated parameters that multivariate TPE co-optimizes
+        # Core compute params
         threads = trial.suggest_categorical("threads", thread_opts)
         threads_batch = trial.suggest_categorical("threads_batch", thread_opts)
         batch_size = trial.suggest_categorical("batch_size", batch_opts)
         ubatch_size = trial.suggest_categorical("ubatch_size", ubatch_opts)
+
+        # I/O toggles — co-optimized with core params so TPE can learn
+        # interactions like flash_attn×batch_size, cpu_strict×threads, poll×threads
+        flash_attn = trial.suggest_categorical("flash_attn", ["on", "off"])
+        mlock = trial.suggest_categorical("mlock", [True, False])
+        no_mmap = trial.suggest_categorical("no_mmap", [True, False])
+        swa_full = trial.suggest_categorical("swa_full", [True, False])
+        repack = trial.suggest_categorical("repack", [True, False])
+        op_offload = trial.suggest_categorical("op_offload", [True, False])
+        poll = trial.suggest_categorical("poll", [0, 10, 25, 50, 100])
+        poll_batch = trial.suggest_categorical("poll_batch", [0, 10, 25, 50, 100])
+        prio = trial.suggest_int("prio", 0, 3)
+        prio_batch = trial.suggest_int("prio_batch", 0, 3)
+        cpu_strict = trial.suggest_categorical("cpu_strict", [0, 1])
+        cpu_strict_batch = trial.suggest_categorical("cpu_strict_batch", [0, 1])
 
         # Pre-boot pruning
         if ubatch_size > batch_size:
@@ -2242,11 +2256,26 @@ def phase_core_engine(n_trials=80):
             "threads_batch": threads_batch,
             "batch_size": batch_size,
             "ubatch_size": ubatch_size,
-            "flash_attn": "on",        # Keep flash on during core (toggled in Phase 3)
-            "kv_cache_type": "f16",     # Keep lossless during core (tested in Phase 5)
+            "flash_attn": flash_attn,
+            "kv_cache_type": "f16",     # Keep lossless during core (tested in KV Quality phase)
+            "mlock": mlock,
+            "no_mmap": no_mmap,
+            "swa_full": swa_full,
+            "repack": repack,
+            "op_offload": op_offload,
+            "poll": poll,
+            "poll_batch": poll_batch,
+            "prio": prio,
+            "prio_batch": prio_batch,
+            "cpu_strict": cpu_strict,
+            "cpu_strict_batch": cpu_strict_batch,
             "n_gpu_layers": ctx.default_gpu_layers,
             "fit": True,
         }
+
+        # NUMA awareness — only on multi-NUMA systems
+        if ctx.numa_nodes > 1:
+            config["numa"] = trial.suggest_categorical("numa", ["distribute", "isolate", "numactl"])
 
         # MoE: co-optimize n_cpu_moe with threads (the key correlation)
         if ctx.is_moe:
@@ -2266,58 +2295,53 @@ def phase_core_engine(n_trials=80):
             return cached
 
         moe_str = f" moe={config.get('n_cpu_moe', '-')}" if ctx.is_moe else ""
-        params_short = f"t={threads}/{threads_batch} b={batch_size} ub={ubatch_size}{moe_str}"
+        params_short = (f"t={threads}/{threads_batch} b={batch_size} ub={ubatch_size} "
+                        f"fa={flash_attn} poll={poll}{moe_str}")
 
-        if use_bench:
-            print(f"\n  Trial {trial.number}: bench | {params_short}")
-            perf = run_bench_trial(config, repetitions=3)
-            if perf is None or perf.get("error") == "oom":
-                err = "OOM" if perf and perf.get("error") else "bench error"
-                print(f"  Trial {trial.number}: pruned ({err})")
-                raise optuna.exceptions.TrialPruned()
-        else:
-            print(f"\n  Trial {trial.number}: server | {params_short}")
+        print(f"\n  Trial {trial.number}: server | {params_short}")
+        kill_server()
+        proc = start_server(config)
+        status = wait_for_server(proc=proc)
+        if status == "oom":
+            print(f"  Trial {trial.number}: pruned (OOM)")
             kill_server()
-            proc = start_server(config)
-            status = wait_for_server(proc=proc)
-            if status == "oom":
-                print(f"  Trial {trial.number}: pruned (OOM)")
-                kill_server()
+            raise optuna.exceptions.TrialPruned()
+        elif status != "ok":
+            _server_start_failed(trial.number, params_short, proc)
+            return 0.0 if not is_pareto else (0.0, -99999.0, 0.0)
+
+        # Multi-fidelity gate
+        gate = measure_perf_quick_gate(n_predict=5)
+        if gate and best_score > 0:
+            gate_score = gate.get("gate_score", 0)
+            trial.report(gate_score, step=0)
+            if trial.should_prune():
+                print(f"  Trial {trial.number}: pruned by gate ({gate_score:.1f})")
                 raise optuna.exceptions.TrialPruned()
-            elif status != "ok":
-                _server_start_failed(trial.number, params_short, proc)
-                return 0.0 if not is_pareto else (0.0, -99999.0, 0.0)
 
-            # Multi-fidelity gate
-            gate = measure_perf_quick_gate(n_predict=5)
-            if gate and best_score > 0:
-                gate_score = gate.get("gate_score", 0)
-                trial.report(gate_score, step=0)
-                if trial.should_prune():
-                    print(f"  Trial {trial.number}: pruned by gate ({gate_score:.1f})")
-                    raise optuna.exceptions.TrialPruned()
-
-            perf, promoted = measure_perf_adaptive(best_score)
+        perf, promoted = measure_perf_adaptive(best_score)
 
         from .trial_helpers import record_trial_attrs, finalize_trial
         tps = perf["tps"]
         score = score_fn(perf)
 
-        if not use_bench:
-            trial.report(score, step=1)
+        trial.report(score, step=1)
 
         record_trial_attrs(trial, perf)
         result, best_score = finalize_trial(trial, perf, params_short, best_score, total_trials, is_pareto, score=score)
         return result
 
-    est_minutes = remaining * (8 if use_bench else 25) // 60
+    est_minutes = remaining * 25 // 60
     print(f"\n[*] Running {remaining} trials (+ {completed} done, ~{est_minutes} min)...")
-    print(f"    Sampler: Multivariate TPE (learns threads×batch correlations)")
+    print(f"    Sampler: Multivariate TPE (learns threads×batch×flash_attn×poll correlations)")
     from .trial_helpers import run_study_with_callbacks, print_phase_summary
     run_study_with_callbacks(study, objective, remaining, label, best_score, is_pareto)
 
     baseline_score = score_fn(baseline)
-    param_keys = ["threads", "threads_batch", "batch_size", "ubatch_size", "n_cpu_moe"]
+    param_keys = ["threads", "threads_batch", "batch_size", "ubatch_size",
+                  "flash_attn", "mlock", "no_mmap", "swa_full", "repack", "op_offload",
+                  "poll", "poll_batch", "prio", "prio_batch",
+                  "cpu_strict", "cpu_strict_batch", "n_cpu_moe"]
     returned_params, _ = print_phase_summary(
         "core_engine", study, baseline, baseline_score, phase_start_time,
         is_pareto, score_fn=score_fn, param_keys=param_keys)
@@ -2887,10 +2911,6 @@ def phase_workload_sim(base_config=None):
     return results
 
 
-# Context Size Sweep
-# ============================================================
-
-
 # ============================================================
 # Context Size Sweep
 # ============================================================
@@ -2962,11 +2982,6 @@ def phase_context_sweep(base_config=None, contexts=None, n_runs=3):
 
 # ============================================================
 # Batch Pipeline — optimize multiple models
-# ============================================================
-
-
-# ============================================================
-# Batch Pipeline
 # ============================================================
 
 def batch_optimize(models_dir, preset="normal", skip_existing=False, timeout_minutes=0, interactive=False):
@@ -3093,11 +3108,6 @@ def batch_optimize(models_dir, preset="normal", skip_existing=False, timeout_min
 
 
 # ============================================================
-# Command Generation & Reporting
-# ============================================================
-
-
-# ============================================================
 # Full Pipeline
 # ============================================================
 
@@ -3108,33 +3118,31 @@ def run_full_pipeline(trials_moe=50, trials_p1b=60, trials_p2=60, trials_p1c=60,
     multivariate co-optimization that finds the global optimum in fewer trials.
 
     Phase 1: VRAM Boundaries (GPU offload, tensor split)
-    Phase 2: Core Tensor Engine (threads × batch × ubatch × n_cpu_moe, multivariate TPE)
-    Phase 3: System I/O Toggles (flash_attn, mlock, poll, etc.)
-    Phase 4: Speculative Decoding (N-gram or draft model)
-    Phase 5: KV Cache + Quality (PPL/NIAH quality gates)
-    Phase 6: Workload Simulation (hot-cache TTFT, concurrent load)
-    Phase 7: Quality/Sampling (temperature, top_p, mirostat)
+    Phase 2: Core Engine + I/O (threads × batch × flash_attn × poll × ..., multivariate TPE)
+    Phase 3: Speculative Decoding (N-gram or draft model)
+    Phase 4: KV Cache + Quality (PPL/NIAH quality gates)
+    Phase 5: Workload Simulation (hot-cache TTFT, concurrent load)
+    Phase 6: Quality/Sampling (temperature, top_p, mirostat)
     """
     p = _config.get("preset", "normal")
     # Scale trial counts by preset
     preset_scale = {"quick": 0.5, "normal": 1.0, "thorough": 1.5}
     scale = preset_scale.get(p, 1.0)
-    t_core = max(40, int(80 * scale))
-    t_io = max(10, int(20 * scale))
+    # Core engine now includes I/O toggles (merged) — more params needs more trials
+    t_core = max(60, int(100 * scale))
     t_spec = max(20, int(40 * scale))
     t_kv = max(8, int(15 * scale))
     t_quality = max(30, int(60 * scale))
-    total_est = t_core + t_io + t_spec + t_kv + t_quality
+    total_est = t_core + t_spec + t_kv + t_quality
 
     print("\n" + "=" * 60)
     print("  PYRAMID OPTIMIZATION PIPELINE")
     print(f"  Phase 1: VRAM Boundaries    (GPU offload + tensor split)")
-    print(f"  Phase 2: Core Engine        ({t_core} trials, multivariate TPE)")
-    print(f"  Phase 3: I/O Toggles        ({t_io} trials)")
-    print(f"  Phase 4: Speculation         ({t_spec} trials)")
-    print(f"  Phase 5: KV Cache + Quality  ({t_kv} trials, PPL/NIAH)")
-    print(f"  Phase 6: Workload Sim        (hot-cache + load test)")
-    print(f"  Phase 7: Quality/Sampling    ({t_quality} trials)")
+    print(f"  Phase 2: Core Engine + I/O  ({t_core} trials, multivariate TPE)")
+    print(f"  Phase 3: Speculation         ({t_spec} trials)")
+    print(f"  Phase 4: KV Cache + Quality  ({t_kv} trials, PPL/NIAH)")
+    print(f"  Phase 5: Workload Sim        (hot-cache + load test)")
+    print(f"  Phase 6: Quality/Sampling    ({t_quality} trials)")
     print(f"  Total:   ~{total_est} trials  [{p}]")
     print("=" * 60)
 
@@ -3147,7 +3155,7 @@ def run_full_pipeline(trials_moe=50, trials_p1b=60, trials_p2=60, trials_p1c=60,
     pipeline_timer = PhaseTimer()
     pipeline_timer.start_phase("pipeline_total")
 
-    phase_names = ["GPU Offload", "Tensor Split", "Core Engine", "I/O Toggles",
+    phase_names = ["GPU Offload", "Tensor Split", "Core Engine",
                    "Speculation", "KV Quality", "Workload Sim", "Context Sweep",
                    "NIAH", "Quality"]
 
@@ -3196,30 +3204,25 @@ def run_full_pipeline(trials_moe=50, trials_p1b=60, trials_p2=60, trials_p1c=60,
     if len(gpus) >= 2 and not _skip(0, "Tensor Split"):
         _run_phase("Tensor Split", lambda: phase_tensor_split(gpus))
 
-    # ── Phase 2: Core Tensor Engine ──
+    # ── Phase 2: Core Engine + I/O Toggles (merged) ──
     core_best = None
     if not _skip(1, "Core Engine"):
         core_best = _run_phase("Core Engine", lambda: phase_core_engine(n_trials=t_core))
     if core_best is None:
         core_data = load_phase_results("core_engine")
         core_best = core_data["best_params"] if core_data else {}
+        # Also check for legacy io_toggles results from previous runs
+        io_data = load_phase_results("io_toggles")
+        if io_data and "best_params" in io_data:
+            core_best.update(io_data["best_params"])
 
     # Build accumulating config
     best_config = {**ctx.naked_engine}
     best_config.update(core_best)
 
-    # ── Phase 3: I/O Toggles ──
-    io_best = None
-    if not _skip(2, "I/O Toggles"):
-        io_best = _run_phase("I/O Toggles", lambda: phase_io_toggles(n_trials=t_io, base_core_config=best_config))
-    if io_best is None:
-        io_data = load_phase_results("io_toggles")
-        io_best = io_data["best_params"] if io_data else {}
-    best_config.update(io_best)
-
-    # ── Phase 4: Speculative Decoding ──
+    # ── Phase 3: Speculative Decoding ──
     spec_best = None
-    if not _skip(3, "Speculation"):
+    if not _skip(2, "Speculation"):
         spec_best = _run_phase("Speculation", lambda: phase_speculation(n_trials=t_spec, base_config=best_config))
     if spec_best is None:
         spec_data = load_phase_results("speculation")
@@ -3228,23 +3231,23 @@ def run_full_pipeline(trials_moe=50, trials_p1b=60, trials_p2=60, trials_p1c=60,
     if spec_best:
         best_config.update(spec_best)
 
-    # ── Phase 5: KV Cache + Quality ──
+    # ── Phase 4: KV Cache + Quality ──
     kv_best = None
-    if not _skip(4, "KV Quality"):
+    if not _skip(3, "KV Quality"):
         kv_best = _run_phase("KV Quality", lambda: phase_kv_quality(n_trials=t_kv, base_config=best_config))
     if kv_best is None:
         kv_data = load_phase_results("kv_quality")
         kv_best = kv_data["best_params"] if kv_data else {}
     best_config.update(kv_best)
 
-    # ── Phase 6: Workload Simulation ──
-    if not _skip(5, "Workload Sim"):
+    # ── Phase 5: Workload Simulation ──
+    if not _skip(4, "Workload Sim"):
         _run_phase("Workload Sim", lambda: phase_workload_sim(base_config=best_config))
 
     # ── Context Sweep (auto mode) ──
     if _config.get("target_context"):
         print(f"\n[*] Context locked to {_config['target_context']:,} — skipping context sweep.")
-    elif not _skip(6, "Context Sweep"):
+    elif not _skip(5, "Context Sweep"):
         sweep_results = _run_phase("Context Sweep", lambda: phase_context_sweep(base_config=best_config))
         if sweep_results:
             peak_tps = max((r["tps"] for r in sweep_results.values() if r.get("fits")), default=0)
@@ -3258,13 +3261,13 @@ def run_full_pipeline(trials_moe=50, trials_p1b=60, trials_p2=60, trials_p1c=60,
                     print(f"  [*] Auto-selected context: {best_ctx:,} (≥80% of peak {peak_tps:.1f} t/s)")
 
     # ── NIAH ──
-    if not _skip(7, "NIAH"):
+    if not _skip(6, "NIAH"):
         _run_phase("NIAH", lambda: phase_niah(base_config=best_config))
 
-    # ── Phase 7: Quality/Sampling ──
+    # ── Phase 6: Quality/Sampling ──
     if _config.get("skip_quality") or t_quality <= 0:
         print("\n[*] Skipping Quality/sampling phase.")
-    elif not _skip(8, "Quality"):
+    elif not _skip(7, "Quality"):
         _run_phase("Quality", lambda: phase3(n_trials=t_quality))
 
     pipeline_timer.end_phase("pipeline_total")

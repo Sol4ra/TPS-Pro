@@ -11,7 +11,7 @@ from .state import ctx, _config
 logger = logging.getLogger(__name__)
 from .constants import (
     SCORE_VERSION, SCORE_TTFT_BASELINE, SCORE_PP_BASELINE,
-    ADAPTIVE_THRESHOLD, CV_TARGET, CV_MIN_RUNS, CV_MAX_RUNS,
+    ADAPTIVE_THRESHOLD, ADAPTIVE_WARMUP_RUNS, CV_TARGET, CV_MIN_RUNS, CV_MAX_RUNS,
     TPS_TEST_PROMPT,
 )
 
@@ -300,27 +300,38 @@ def get_best_value(study):
 def measure_perf_adaptive(best_score, n_predict=50, spec_params=None):
     """Adaptive measurement with CV-based stability.
 
-    1. Quick first run as a gate.
-    2. If competitive (>= 70% of best), run CV-stabilized measurement.
-    3. Runs 3-5 times until CV <= 5% (or max reached). Discards warmup run.
+    1. Run ADAPTIVE_WARMUP_RUNS quick runs as a gate (median score decides).
+    2. If competitive (>= 50% of best), run CV-stabilized measurement.
+    3. Runs 3-5 times until CV <= 5% (or max reached). Discards warmup runs.
     4. Promoted configs get a large-prompt benchmark too.
 
     Returns (perf_dict, was_promoted) — was_promoted is True if stable runs were done.
     """
-    # Quick first run (warmup — always discarded from final stats)
-    first = _measure_perf_once(n_predict=n_predict, spec_params=spec_params)
-    if first is None:
+    # Warmup runs — use median score to decide promotion (reduces false kills
+    # from a single unlucky run on noisy server benchmarks)
+    warmup_results = []
+    for _ in range(ADAPTIVE_WARMUP_RUNS):
+        run = _measure_perf_once(n_predict=n_predict, spec_params=spec_params)
+        if run is not None:
+            warmup_results.append(run)
+
+    if not warmup_results:
         return {"tps": 0.0, "ttft": 0.0, "prompt_tps": 0.0, "total_ms": 0.0}, False
 
-    quick_score = compute_score(first)
+    # Use median warmup score (sorts by composite score, picks middle)
+    warmup_scores = sorted(warmup_results, key=lambda s: compute_score(s))
+    best_warmup = warmup_scores[len(warmup_scores) // 2]
+    quick_score = compute_score(best_warmup)
 
-    # If clearly bad, don't waste time on more runs
+    # If clearly bad across multiple warmup runs, don't waste time
     if best_score > 0 and quick_score < best_score * ADAPTIVE_THRESHOLD:
-        return first, False
+        return best_warmup, False
 
-    # Competitive — CV-stabilized measurement (first run is warmup, start fresh)
-    samples = []
-    for i in range(CV_MAX_RUNS):
+    # Competitive — CV-stabilized measurement.
+    # Seed with warmup data instead of discarding it (saves 2 HTTP round trips).
+    samples = list(warmup_results)
+    extra_needed = CV_MAX_RUNS - len(samples)
+    for i in range(extra_needed):
         s = _measure_perf_once(n_predict=n_predict, spec_params=spec_params)
         if s:
             samples.append(s)
@@ -336,7 +347,7 @@ def measure_perf_adaptive(best_score, n_predict=50, spec_params=None):
                     break  # stable enough
 
     if not samples:
-        return first, False
+        return best_warmup, False
 
     result = _aggregate_samples(samples)
 
@@ -386,12 +397,20 @@ def measure_perf_quick_gate(n_predict=5):
             ttft = timings.get("prompt_ms", 0)
             tps = timings.get("predicted_per_second", 0)
             if prompt_tps > 0 or ttft > 0:
+                # Gate score aligned with compute_score lightweight formula:
+                #   score = gen_tps * (0.60 + 0.25 * pp_factor + 0.15 * ttft_factor)
+                # gen_tps is the #1 signal (35% in full mode), so the gate must
+                # include it — the old formula only used pp+ttft which could
+                # promote configs that score well on prompt speed but poorly on gen.
+                pp_factor = min(prompt_tps / SCORE_PP_BASELINE, 3.0) if prompt_tps > 0 else 0.0
+                ttft_factor = min(SCORE_TTFT_BASELINE / max(1, ttft), 3.0)
+                gate_score = tps * (0.60 + 0.25 * pp_factor + 0.15 * ttft_factor)
                 return {
                     "tps": tps,
                     "ttft": ttft,
                     "prompt_tps": prompt_tps,
                     "total_ms": ttft + timings.get("predicted_ms", 0),
-                    "gate_score": prompt_tps * 0.6 + (1000.0 / max(1, ttft)) * 0.4,
+                    "gate_score": gate_score,
                 }
     except (requests.RequestException, ValueError, KeyError) as e:
         logger.debug("Quick gate measurement failed: %s", e)

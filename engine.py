@@ -56,12 +56,14 @@ class LogTee:
     """Tees stdout to both the console and a timestamped log file."""
 
     def __init__(self, results_dir):
+        import atexit
         self._original_stdout = sys.stdout
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_path = Path(results_dir) / f"optimize_{ts}.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        self._file = open(log_path, "w", encoding="utf-8")
+        self._file = open(log_path, "w", encoding="utf-8", buffering=1)  # line-buffered
         self.log_path = str(log_path)
+        atexit.register(self.close)
 
     def write(self, data):
         self._original_stdout.write(data)
@@ -573,11 +575,13 @@ def kill_server():
     ctx.http = requests.Session()
 
     import socket
-    for _ in range(20):
-        time.sleep(0.2)
+    delay = 0.05  # start at 50ms, exponential backoff
+    for _ in range(12):
+        time.sleep(delay)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if s.connect_ex(("127.0.0.1", ctx.port)) != 0:
                 return
+        delay = min(delay * 2, 0.5)  # cap at 500ms
 
 
 def is_server_running():

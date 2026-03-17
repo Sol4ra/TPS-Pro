@@ -49,7 +49,8 @@ QUALITY_GATE_CLIFF_PENALTY = 0.1
 # Adaptive Measurement
 # ============================================================
 
-ADAPTIVE_THRESHOLD = 0.70  # score must be >= 70% of best to warrant full measurement
+ADAPTIVE_THRESHOLD = 0.50  # score must be >= 50% of best to warrant full measurement
+ADAPTIVE_WARMUP_RUNS = 2   # number of warmup runs before deciding promotion (reduces false kills)
 CV_TARGET = 0.05           # target coefficient of variation for stable measurement
 CV_MIN_RUNS = 3            # minimum runs before checking CV
 CV_MAX_RUNS = 5            # maximum runs for stability (keep tight to avoid 35s/trial)
@@ -73,7 +74,18 @@ KL_DIV_PROMPTS = [
 PPL_DEGRADATION_WARN = 0.10   # 10% PPL increase = warning (soft penalty)
 PPL_DEGRADATION_FAIL = 0.30   # 30% PPL increase = hard fail (severe penalty)
 
-_PPL_REFERENCE_TEXT = (_DATA_DIR / "ppl_reference.txt").read_text(encoding="utf-8")
+_PPL_REFERENCE_TEXT = None  # lazy-loaded on first use to avoid import-time FileNotFoundError
+
+def get_ppl_reference_text():
+    """Lazy-load the perplexity reference text on first use."""
+    global _PPL_REFERENCE_TEXT
+    if _PPL_REFERENCE_TEXT is None:
+        ppl_path = _DATA_DIR / "ppl_reference.txt"
+        if ppl_path.exists():
+            _PPL_REFERENCE_TEXT = ppl_path.read_text(encoding="utf-8")
+        else:
+            raise FileNotFoundError(f"PPL reference text not found: {ppl_path}")
+    return _PPL_REFERENCE_TEXT
 
 # ============================================================
 # Quality Gate Prompts (GPQA Diamond — graduate-level)

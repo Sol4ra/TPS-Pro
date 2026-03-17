@@ -295,16 +295,26 @@ def check_duplicate_trial(trial):
     """Check if this exact param combo was already tested. Returns cached score or None.
 
     In multi-objective (Pareto) mode, returns the tuple of values instead of a scalar.
-    Detects multi-objective from the study itself, not the global config.
+    Uses a frozen-params dict for O(1) lookup instead of scanning all past trials.
     """
-    is_multi = len(trial.study.directions) > 1
-    for past in trial.study.trials:
-        if past.state == optuna.trial.TrialState.COMPLETE and past.params == trial.params:
-            for k, v in past.user_attrs.items():
-                trial.set_user_attr(k, v)
-            if is_multi and past.values is not None:
-                return past.values  # tuple of objectives
-            return past.value
+    # Build lookup cache on first call (lazy, attached to study object)
+    study = trial.study
+    if not hasattr(study, "_param_cache"):
+        study._param_cache = {}
+        for past in study.trials:
+            if past.state == optuna.trial.TrialState.COMPLETE:
+                key = tuple(sorted(past.params.items()))
+                study._param_cache[key] = past
+
+    key = tuple(sorted(trial.params.items()))
+    past = study._param_cache.get(key)
+    if past is not None:
+        for k, v in past.user_attrs.items():
+            trial.set_user_attr(k, v)
+        is_multi = len(study.directions) > 1
+        if is_multi and past.values is not None:
+            return past.values
+        return past.value
     return None
 
 

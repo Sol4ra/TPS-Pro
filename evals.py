@@ -18,7 +18,7 @@ from .constants import (
     QUALITY_WEIGHT_CORRECTNESS, QUALITY_WEIGHT_CONFIDENCE, QUALITY_WEIGHT_EFFICIENCY,
     QUALITY_EVAL_SEED, QUALITY_TTFT_BASELINE,
     KL_DIV_TOP_K, KL_DIV_THRESHOLD, KL_DIV_HARD_FAIL, KL_DIV_PROMPTS,
-    _PPL_REFERENCE_TEXT, PPL_DEGRADATION_WARN, PPL_DEGRADATION_FAIL,
+    get_ppl_reference_text, PPL_DEGRADATION_WARN, PPL_DEGRADATION_FAIL,
     _NIAH_NEEDLES, _NIAH_FILLER_BLOCKS,
 )
 
@@ -216,7 +216,7 @@ def measure_true_perplexity(text_chunk=None):
         float: Perplexity value, or float('inf') on failure.
     """
     if text_chunk is None:
-        text_chunk = _PPL_REFERENCE_TEXT
+        text_chunk = get_ppl_reference_text()
 
     # llama-server's completions endpoint supports logprobs on generated tokens.
     # Strategy: feed most of the text as prompt, generate the rest, measure logprobs.
@@ -897,7 +897,7 @@ def phase_reasoning_eval(n_tasks=5):
     print("=" * 60)
 
     tasks = [
-        ("What is the derivative of x^3 * ln(x)?", "3x^2", ["3x^2 ln(x)", "x^2(3ln(x)+1)", "3x²"]),
+        ("What is the derivative of x^3 * ln(x)?", "x^2(3ln(x)+1)", ["3x^2 ln(x) + x^2", "x^2(3ln(x)+1)", "x^2(3 ln(x) + 1)", "3x^2ln(x) + x^2"]),
         ("A train travels 60mph for 2 hours, then 90mph for 1 hour. What is the average speed?", "70", ["70"]),
         ("If all roses are flowers and some flowers fade quickly, can we conclude all roses fade quickly?", "no", ["no", "cannot conclude", "not necessarily"]),
         ("What is 17 * 23?", "391", ["391"]),
