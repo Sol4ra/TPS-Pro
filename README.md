@@ -1,74 +1,116 @@
-# llama-optimizer
+# TPS Pro
 
-Automated multi-phase parameter optimizer for llama-server (llama.cpp) using Optuna-based coordinate descent search.
+Automated multi-phase parameter optimizer for [llama-server](https://github.com/ggml-org/llama.cpp) (llama.cpp). Uses Optuna-based coordinate descent to find the fastest server configuration for your hardware and model.
+
+## What It Does
+
+TPS Pro runs your llama-server with hundreds of different parameter combinations, measures tokens/second for each, and outputs the optimal launch command. It handles GPU offloading, thread tuning, KV cache quantization, speculative decoding, and more -- all automatically.
+
+The optimizer uses a **Pyramid Pipeline** where each phase locks its best parameters before the next begins, avoiding confounding variables and finding the optimum in fewer trials than a flat search.
 
 ## Quick Start
 
-**Requirements:** Python 3.9+, a working `llama-server` binary, and a GGUF model file.
+**Requirements:** Python 3.9+, a `llama-server` binary, and a GGUF model file.
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the optimizer
+pip install -e .
 python -m tps_pro --server /path/to/llama-server --model /path/to/model.gguf
 ```
 
-The interactive menu will guide you through setup and optimization. Use `--help` for all CLI options.
+The first-run wizard walks you through setup. After that, the interactive menu lets you optimize, view results, switch models, and configure settings.
+
+## CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--server PATH` | Path to llama-server executable |
+| `--model PATH` | Path to GGUF model file |
+| `--config PATH` | Path to JSON config file |
+| `--preset quick\|normal\|thorough` | Trial count multiplier (0.5x / 1.0x / 1.5x) |
+| `--batch DIR` | Optimize all GGUF files in a directory |
+| `--draft-model PATH` | Draft model for speculative decoding |
+| `--chat-template PATH` | Path to Jinja chat template |
+| `--port N` | Server port (default: 8090) |
+| `--results-dir PATH` | Output directory |
+| `--simulate-users N` | Concurrent user load test |
+| `--pareto` | Multi-objective Pareto optimization |
+| `--dashboard` | Launch Optuna dashboard web UI |
+| `--skip-quality` | Skip quality/sampling phase |
+| `--skip-existing` | Skip models with existing results (batch mode) |
+| `--timeout MINUTES` | Per-model timeout (batch mode) |
+| `--dense` | Force dense mode (skip MoE phases) |
+| `--no-jinja` | Disable Jinja template parsing |
+| `--no-bench` | Disable llama-bench acceleration |
+| `--kill-competing` | Kill GPU processes (>500MB VRAM) before optimizing |
+| `--fail-fast` | Exit if baseline server fails to start |
+| `--interactive` | Pause between phases for inspection |
+| `--dry-run` | Show what would happen without executing |
+| `--debug` | Verbose debug output |
+
+## Pipeline Phases
+
+Each phase finds the best value for its parameters, locks them, then hands off to the next:
+
+| # | Phase | Method | What It Searches |
+|---|-------|--------|------------------|
+| 1 | **GPU Offload** | Binary search + llama-bench | `n_gpu_layers` -- how many layers to offload to GPU |
+| 2 | **Tensor Split** | Grid sweep | Split ratios across multiple GPUs (2+ GPUs only) |
+| 3 | **MoE Threads** | Grid sweep | `n_cpu_moe` thread count (MoE models only) |
+| 4 | **KV + Context** | Sweep + NIAH quality test | KV cache type (f16/q8_0/q4_0) and max context size |
+| 5 | **Core Engine** | Optuna TPE (two layers) | Threads, batch sizes, flash attention, polling, mlock, mmap, and 8+ toggles |
+| 6 | **Speculation** | Optuna TPE | N-gram and draft model speculative decoding params |
+| 7 | **Workload Sim** | Direct measurement | Hot-cache TTFT, concurrent user throughput |
+| 8 | **Quality** | Optuna TPE | Temperature, top_p, mirostat -- optimized for output quality |
+
+MoE models get an additional **Expert Count** phase that sweeps active expert counts with KL-divergence quality gates.
 
 ### Presets
 
-- `--preset quick` -- Fewer trials, faster results (~50% of normal)
-- `--preset normal` -- Default balance of speed and thoroughness
-- `--preset thorough` -- More trials for maximum optimization (~150% of normal)
+Presets control how many trials each phase runs:
 
-### Batch Mode
+- **quick** -- 50% of normal trials. Fast results, good enough for most models.
+- **normal** -- Default. Balanced speed and thoroughness.
+- **thorough** -- 150% of normal trials. Maximum optimization for production deployments.
 
-Optimize all GGUF files in a directory:
+## Scoring
 
-```bash
-python -m tps_pro --batch /path/to/models/ --preset normal
-```
+Trials are scored with a composite formula (v3) that blends multiple signals:
 
-## Architecture
+| Signal | Weight | What It Measures |
+|--------|--------|------------------|
+| Generation TPS | 35% | Raw token generation speed |
+| Large-context TPS | 25% | Speed under large context windows |
+| Prompt processing | 15% | How fast prompts are ingested (capped at 3x baseline) |
+| Time to first token | 15% | Latency before generation starts (capped at 3x baseline) |
+| VRAM efficiency | 10% | Headroom remaining after model load |
 
-The optimizer uses a **Pyramid Pipeline** that runs phases in dependency order, where each phase locks its parameters before the next begins. This avoids confounding variables and finds the global optimum in fewer trials than a flat search.
-
-### Pipeline Phases
-
-| Phase | Name | Method | Purpose |
-|-------|------|--------|---------|
-| 1 | GPU Offload | Grid sweep | Find optimal n_gpu_layers for VRAM boundary |
-| 2 | Tensor Split | Grid sweep | Multi-GPU weight distribution (2+ GPUs only) |
-| 3 | KV + Context Sweep | Sweep + NIAH | Test KV cache quantization (f16/fp8/fp4) and max context size |
-| 4 | Core Engine | Optuna TPE | Multivariate search over threads, batch size, flash attention, polling, and I/O toggles |
-| 5 | Speculation | Optuna TPE | N-gram or draft model speculative decoding parameters |
-| 6 | Workload Sim | Direct test | Hot-cache TTFT and concurrent user load testing |
-| 7 | Quality/Sampling | Optuna TPE | Temperature, top_p, mirostat -- optimized for quality score |
-
-Each phase persists its results to JSON files in the results directory. Interrupted runs resume from the last completed trial.
-
-### Scoring
-
-Trials are scored using a composite formula (`constants/scoring.py`, `SCORE_VERSION=v3`) that blends:
-
-- Generation tokens/second (dominant signal)
-- Prompt processing throughput
-- Time to first token (TTFT)
-- VRAM efficiency
-
-Quality gates (perplexity, KL-divergence, NIAH accuracy) prevent configs that sacrifice output quality for raw speed.
+Quality gates prevent configs that sacrifice output quality for raw speed:
+- **MCQ accuracy** -- Graduate-level multiple choice questions
+- **KL-divergence** -- Distribution drift from baseline (hard fail at 1.5)
+- **Perplexity** -- Reference text degradation (hard fail at 30% increase)
+- **NIAH** -- Needle-in-a-haystack long-context recall
+- **Quality gate tokens** -- Token-level uncertainty measurement
 
 ## Configuration
 
-The optimizer reads `config.json` from the working directory (or a path given via `--config`). Key fields:
+The optimizer reads from `optimizer-config.json` (auto-generated by the setup wizard) and an optional `pipeline-config.json` for per-phase tuning.
 
 ```json
 {
   "server": "/path/to/llama-server",
   "model": "/path/to/model.gguf",
-  "port": 8080,
+  "chat_template": "/path/to/template.jinja",
+  "port": 8090,
   "preset": "normal",
+  "architecture": {
+    "type": "moe",
+    "expert_override_key": "qwen3moe.expert_used_count",
+    "default_experts": 8,
+    "max_experts": 16
+  },
+  "hardware": {
+    "default_gpu_layers": 99
+  },
   "draft_model": "/path/to/draft.gguf",
   "simulate_users": 4,
   "skip_quality": false,
@@ -76,68 +118,99 @@ The optimizer reads `config.json` from the working directory (or a path given vi
 }
 ```
 
-Hardware is auto-detected (GPUs via pynvml, CPU threads via psutil, NUMA topology). Override with the `hardware` key if needed.
+Hardware (GPUs, CPU threads, NUMA topology) is auto-detected. Architecture (Dense vs MoE) is auto-detected from GGUF metadata when possible.
 
-## Reading Results
+## Results
 
-Results are saved to the `results/` directory (or a model-specific subdirectory in batch mode):
+Results are saved to the `results/` directory:
 
 | File | Contents |
 |------|----------|
-| `*_results.json` | Raw phase output (best params, trial data) |
+| `*_results.json` | Phase output -- best params, all trial data |
 | `command.txt` | Ready-to-run llama-server command with optimized flags |
 | `report.html` | Visual summary of all phases |
-| `optuna.db` | SQLite database for Optuna dashboard visualization |
+| `optuna.db` | SQLite database for Optuna dashboard |
 
 ### Optuna Dashboard
 
-View trial history and parameter importance interactively:
+View trial history, parameter importance, and optimization trajectories:
 
 ```bash
-python results/_dashboard_launcher.py
+python -m tps_pro --dashboard
 # Opens at http://127.0.0.1:8190
 ```
+
+## Hardware Support
+
+- **NVIDIA GPUs** -- Auto-detected via pynvml (VRAM monitoring, thermal throttle protection, multi-GPU tensor splitting)
+- **CPU** -- Thread count auto-detection, NUMA topology awareness
+- **Thermal protection** -- Pauses optimization if GPU exceeds 80C, waits for cooldown to 70C
+- **Competing process detection** -- Optionally kills GPU processes hogging VRAM before optimization
+
+## Batch Mode
+
+Optimize every GGUF model in a folder:
+
+```bash
+python -m tps_pro --batch /path/to/models/ --preset normal --skip-existing
+```
+
+Each model gets its own results subdirectory. Interrupted batch runs resume from where they left off.
 
 ## Project Structure
 
 ```
-tps_pro/
-├── tests/               # pytest test suite (1271 tests, 70% coverage)
-├── tools/               # Utility scripts
-└── src/
-    └── tps_pro/
-        ├── main.py          # Entry point, CLI menu loop
-        ├── pipeline.py      # Pipeline orchestrator (run_full_pipeline, batch_optimize)
-        ├── state.py         # AppContext singleton, config loading
-        ├── errors.py        # Custom exception hierarchy, error strategy docs
-        ├── models.py        # GGUF detection, model classification
-        ├── hardware.py      # GPU/CPU/NUMA auto-detection
-        ├── constants/       # Tuning constants, timeouts, scoring weights
-        ├── result_types/    # TypedDict configs, frozen dataclass results
-        ├── measurement/     # TPS measurement, scoring, concurrent load
-        ├── phases/          # One module per pipeline phase
-        ├── engine/          # Server lifecycle (start, kill, wait, bench)
-        ├── evals/           # Quality evaluation (MCQ, NIAH, perplexity, KL-div)
-        ├── cli/             # Menu, wizard, display, services, report generation
-        ├── search/          # Optuna study management, result persistence
-        └── data/            # Reference texts, evaluation prompts (JSON)
+src/tps_pro/
+    main.py              # Entry point and interactive menu
+    pipeline.py          # Pipeline orchestrator
+    pipeline_config.py   # Phase configuration and presets
+    state.py             # AppContext singleton, config loading
+    errors.py            # Exception hierarchy
+    models.py            # GGUF detection, model classification
+    hardware.py          # GPU/CPU/NUMA auto-detection, thermal monitoring
+    constants/           # Tuning constants, timeouts, scoring weights
+    result_types/        # TypedDict configs, frozen dataclass results
+    measurement/         # TPS measurement, scoring, concurrent load
+    phases/              # One module per pipeline phase + shared helpers
+    engine/              # Server lifecycle (start, kill, wait, bench, commands)
+    evals/               # Quality evaluations (MCQ, NIAH, KL-div, perplexity)
+    cli/                 # Menu, wizard, services, display, reports
+    search/              # Optuna study management, callbacks, result persistence
+    data/                # Reference texts, evaluation prompts (JSON)
+tests/                   # 1271 tests across 64 files
 ```
 
 ## Development
 
 ```bash
-# Install dev dependencies
+# Install with dev dependencies
 pip install -e ".[dev]"
 
 # Run tests
-python -m pytest tests/ -q
+pytest tests/ -q
+
+# Run with coverage
+pytest --cov=tps_pro --cov-report=term-missing
 
 # Lint
-ruff check .
+ruff check src/ tests/
 
 # Type check
-mypy --ignore-missing-imports .
+mypy --ignore-missing-imports src/
 ```
+
+## Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| optuna | Hyperparameter optimization framework |
+| requests | HTTP client for server communication |
+| numpy | Numerical computing |
+| pynvml | NVIDIA GPU monitoring |
+| psutil | System monitoring (CPU, memory, processes) |
+| aiohttp | Async HTTP for concurrent load testing |
+
+Optional: `scikit-learn` and `scipy` for Gaussian Process early stopping (`pip install -e ".[gp]"`).
 
 ## License
 
