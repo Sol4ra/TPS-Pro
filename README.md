@@ -50,7 +50,7 @@ Each phase persists its results to JSON files in the results directory. Interrup
 
 ### Scoring
 
-Trials are scored using a composite formula (`constants.py`, `SCORE_VERSION=v3`) that blends:
+Trials are scored using a composite formula (`constants/scoring.py`, `SCORE_VERSION=v3`) that blends:
 
 - Generation tokens/second (dominant signal)
 - Prompt processing throughput
@@ -102,23 +102,23 @@ python results/_dashboard_launcher.py
 
 ```
 tps_pro/
-├── python/              # Bundled Python interpreter
-├── results/             # Output data (generated at runtime)
-├── tests/               # pytest test suite
+├── tests/               # pytest test suite (1271 tests, 70% coverage)
 ├── tools/               # Utility scripts
 └── src/
     └── tps_pro/
         ├── main.py          # Entry point, CLI menu loop
         ├── pipeline.py      # Pipeline orchestrator (run_full_pipeline, batch_optimize)
         ├── state.py         # AppContext singleton, config loading
-        ├── constants.py     # All tuning constants, timeouts, scoring weights
-        ├── measurement.py   # TPS measurement, scoring, concurrent load
+        ├── errors.py        # Custom exception hierarchy, error strategy docs
         ├── models.py        # GGUF detection, model classification
         ├── hardware.py      # GPU/CPU/NUMA auto-detection
+        ├── constants/       # Tuning constants, timeouts, scoring weights
+        ├── result_types/    # TypedDict configs, frozen dataclass results
+        ├── measurement/     # TPS measurement, scoring, concurrent load
         ├── phases/          # One module per pipeline phase
         ├── engine/          # Server lifecycle (start, kill, wait, bench)
         ├── evals/           # Quality evaluation (MCQ, NIAH, perplexity, KL-div)
-        ├── cli/             # Menu, wizard, display, report generation
+        ├── cli/             # Menu, wizard, display, services, report generation
         ├── search/          # Optuna study management, result persistence
         └── data/            # Reference texts, evaluation prompts (JSON)
 ```
