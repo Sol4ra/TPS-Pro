@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Union, cast
 
 from ..constants import (
     DEFAULT_EXPERTS,
@@ -26,6 +26,7 @@ from .services import (
     get_available_models,
     switch_to_model,
 )
+from .services_config import DenseArchConfig, MoeArchConfig
 from .setup_binary import SetupBinaryError, ensure_llama_server
 
 # GGUF filename patterns to skip when scanning for models
@@ -77,7 +78,12 @@ def switch_model() -> None:
         if arch is None:
             return
 
-        switch_to_model(ctx, ctx.config, new_model, arch)
+        switch_to_model(
+            ctx,
+            ctx.config,
+            new_model,
+            cast(Union[MoeArchConfig, DenseArchConfig], arch),
+        )
         from .menu import invalidate_header_cache
 
         invalidate_header_cache()
@@ -112,7 +118,9 @@ def _resolve_model_choice(raw: str, models: list) -> Path | None:
     return None
 
 
-def _resolve_architecture(model_path: Path) -> dict[str, Any] | None:
+def _resolve_architecture(
+    model_path: Path,
+) -> Union[MoeArchConfig, DenseArchConfig, None]:
     """Detect or ask user for architecture config. Returns dict or None."""
     auto = detect_architecture(model_path)
     if auto:
@@ -125,9 +133,11 @@ def _resolve_architecture(model_path: Path) -> dict[str, Any] | None:
         if confirm not in ("n", "no"):
             if arch_type == "moe":
                 return build_arch_config_moe(
-                    expert_override_key=auto.get("expert_override_key", ""),
-                    default_experts=auto.get("default_experts", DEFAULT_EXPERTS),
-                    max_experts=auto.get("max_experts", MAX_EXPERTS),
+                    expert_override_key=cast(str, auto.get("expert_override_key", "")),
+                    default_experts=cast(
+                        int, auto.get("default_experts", DEFAULT_EXPERTS)
+                    ),
+                    max_experts=cast(int, auto.get("max_experts", MAX_EXPERTS)),
                 )
             return build_arch_config_dense()
 
@@ -138,7 +148,7 @@ def _ask_architecture(
     model_path: Path | None = None,
     *,
     first_run: bool = False,
-) -> dict[str, Any] | None:
+) -> Union[MoeArchConfig, DenseArchConfig, None]:
     """Prompt user to choose Dense or MoE. Returns config dict or None.
 
     Args:
@@ -165,7 +175,11 @@ def _ask_architecture(
         return None
 
     if choice == "2":
-        return {"type": "dense"} if first_run else build_arch_config_dense()
+        return (
+            cast(DenseArchConfig, {"type": "dense"})
+            if first_run
+            else build_arch_config_dense()
+        )
     if choice != "1":
         return None
 
@@ -187,12 +201,15 @@ def _ask_architecture(
         return None
 
     if first_run:
-        return {
-            "type": "moe",
-            "expert_override_key": key,
-            "default_experts": _safe_int(de, DEFAULT_EXPERTS),
-            "max_experts": _safe_int(me, MAX_EXPERTS),
-        }
+        return cast(
+            MoeArchConfig,
+            {
+                "type": "moe",
+                "expert_override_key": key,
+                "default_experts": _safe_int(de, DEFAULT_EXPERTS),
+                "max_experts": _safe_int(me, MAX_EXPERTS),
+            },
+        )
     return build_arch_config_moe(
         expert_override_key=key,
         default_experts=_safe_int(de, DEFAULT_EXPERTS),
@@ -245,7 +262,7 @@ def first_run_setup() -> dict[str, Any]:
     print("  Your settings will be saved so you only do this once.")
     print()
 
-    cfg = {}
+    cfg: dict[str, Any] = {}
 
     # Auto-detect / download llama-server (no user interaction needed)
     cfg["server"] = _resolve_server_path()

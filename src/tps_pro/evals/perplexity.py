@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import math
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import (
     HTTP_OK,

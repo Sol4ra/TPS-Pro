@@ -28,7 +28,8 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -145,15 +146,15 @@ class GPStoppingCallback:
         self._seed = seed
         self._rng = np.random.RandomState(seed)
         self._trials_without_improvement = 0
-        self._best_value = None
+        self._best_value: Optional[float] = None
         self._baseline_score = baseline_score
         self._check_every = check_every
         self._call_count = 0
 
         # Cache heavy imports — None means "not yet attempted", False means unavailable
-        self._scipy_minimize = None
-        self._GaussianProcessRegressor = None
-        self._gp_kernels = None
+        self._scipy_minimize: Optional[Callable[..., Any]] = None
+        self._GaussianProcessRegressor: Optional[type] = None
+        self._gp_kernels: Optional[tuple[type, type, type]] = None
         self._imports_available: bool | None = None
 
     def _ensure_imports(self) -> bool:
@@ -206,11 +207,11 @@ class GPStoppingCallback:
         if not self._ensure_imports():
             return None
 
-        ConstantKernel, Matern, WhiteKernel = self._gp_kernels  # noqa: N806
-        kernel = ConstantKernel(1.0) * Matern(
+        ConstantKernel, Matern, WhiteKernel = self._gp_kernels  # type: ignore[misc] # noqa: N806
+        kernel = ConstantKernel(1.0) * Matern(  # type: ignore[operator]
             nu=2.5, length_scale=np.ones(X.shape[1])
         ) + WhiteKernel(noise_level=0.1)
-        gp = self._GaussianProcessRegressor(
+        gp = self._GaussianProcessRegressor(  # type: ignore[misc]
             kernel=kernel,
             n_restarts_optimizer=3,
             random_state=self._seed,
@@ -241,7 +242,7 @@ class GPStoppingCallback:
         for _ in range(self._n_restarts):
             x0 = self._rng.uniform(0, 1, size=n_dims)
             try:
-                result = self._scipy_minimize(
+                result = self._scipy_minimize(  # type: ignore[misc]
                     neg_ei, x0, method="L-BFGS-B", bounds=bounds
                 )
                 ei_val = -result.fun

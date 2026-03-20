@@ -27,7 +27,7 @@ import time
 from collections.abc import Callable
 from typing import Literal
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import (
     BIND_HOST,
@@ -127,7 +127,7 @@ def start_server(ctx: AppContext, engine_config: EngineConfig) -> ServerProcess:
 
     def _drain_stderr():
         try:
-            for line in server_proc.proc.stderr:
+            for line in server_proc.proc.stderr or []:
                 with server_proc.lock:
                     server_proc.stderr_lines.append(
                         line.decode("utf-8", errors="replace").rstrip()

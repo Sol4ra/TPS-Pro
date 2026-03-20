@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from typing import Any
 
 from ..constants import DEFAULT_CONTEXT_SIZE
 from ..state import ctx
@@ -207,7 +208,7 @@ def _run_single_phase(func_name: str, needs_trials: bool, label: str) -> None:
         phase_workload_sim,
     )
 
-    funcs = {
+    funcs: dict[str, Any] = {
         "phase_gpu_offload": phase_gpu_offload,
         "phase_core_engine": phase_core_engine,
         "phase_kv_context_sweep": phase_kv_context_sweep,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 
 from .base import _DictAccessMixin
 
@@ -42,7 +43,7 @@ class QualityResult(_DictAccessMixin):
         ]
         return cls(
             score=data.get("score", 0.0),
-            task_results=tasks,
+            task_results=cast(list[QualityTaskResult], tasks),
         )
 
 
@@ -77,7 +78,7 @@ class NIAHResult(_DictAccessMixin):
         ]
         return cls(
             kv_type=data.get("kv_type", ""),
-            results=results,
+            results=cast(list[NIAHTestResult], results),
             pass_rate=data.get("pass_rate", 0.0),
             ppl=data.get("ppl"),
             oom=data.get("oom", False),

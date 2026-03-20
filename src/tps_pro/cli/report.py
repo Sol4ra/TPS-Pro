@@ -10,6 +10,7 @@ from typing import Any
 
 from ..engine.util import read_json_safe
 from ..hardware import detect_gpus
+from ..result_types import GpuInfo
 from ..state import ctx
 
 logger = logging.getLogger(__name__)
@@ -114,7 +115,7 @@ def _build_importance_html(phases: dict[str, Any]) -> str:
 def generate_html_report(
     results_dir: str | Path | None = None,
     model_name: str | None = None,
-    gpus: list[dict[str, Any]] | None = None,
+    gpus: list[GpuInfo] | None = None,
 ) -> str | None:
     """Generate a comprehensive HTML report from optimization results."""
     from ..constants import SCORE_PP_BASELINE, SCORE_VERSION, TTFT_BASELINE_MS

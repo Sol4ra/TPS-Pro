@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from pathlib import Path
+from typing import Any, cast
 
 from ..constants import BIND_HOST
 from ..result_types import EngineConfig
@@ -39,7 +40,7 @@ def _clamp_numeric(engine_config: EngineConfig) -> EngineConfig:
         if key in clamped:
             raw = clamped[key]
             try:
-                val = int(raw)
+                val = int(raw)  # type: ignore[call-overload]
             except (TypeError, ValueError):
                 continue
             if val < lo or val > hi:
@@ -53,7 +54,7 @@ def _clamp_numeric(engine_config: EngineConfig) -> EngineConfig:
                     new_val,
                 )
                 clamped[key] = new_val
-    return clamped
+    return cast(EngineConfig, clamped)
 
 
 # Allowlist regex for override_tensor values: e.g. "q4_0", "q8_0:0,1", "blk.0.attn=CPU"
@@ -115,16 +116,17 @@ def _add_numeric_flag_pairs(ctx: AppContext, engine_config: EngineConfig) -> lis
         ("threads_batch", "-tb"),
         ("n_cpu_moe", "--n-cpu-moe"),
     ]
+    _ec = cast(dict[str, Any], engine_config)
     for key, flag in flag_pairs:
         if key in engine_config:
-            args.extend([flag, str(engine_config[key])])
+            args.extend([flag, str(_ec[key])])
 
     if "expert_used_count" in engine_config and ctx.expert_override_key:
         if engine_config["expert_used_count"] != ctx.default_experts:
             args.extend(
                 [
                     "--override-kv",
-                    f"{ctx.expert_override_key}=int:{engine_config['expert_used_count']}",
+                    f"{ctx.expert_override_key}=int:{_ec['expert_used_count']}",
                 ]
             )
 
@@ -136,7 +138,7 @@ def _add_numeric_flag_pairs(ctx: AppContext, engine_config: EngineConfig) -> lis
     ]
     for key, flag in toggle_pairs:
         if key in engine_config:
-            args.extend([flag, str(engine_config[key])])
+            args.extend([flag, str(_ec[key])])
     return args
 
 
@@ -214,9 +216,10 @@ def _add_spec_args(engine_config: EngineConfig) -> list[str]:
         ("draft_min", "--draft-min"),
         ("draft_p_min", "--draft-p-min"),
     ]
+    _ec = cast(dict[str, Any], engine_config)
     for key, flag in spec_pairs:
         if key in engine_config:
-            args.extend([flag, str(engine_config[key])])
+            args.extend([flag, str(_ec[key])])
     if "cpu_strict" in engine_config:
         args.extend(["--cpu-strict", str(engine_config["cpu_strict"])])
     if "cpu_strict_batch" in engine_config:
@@ -256,9 +259,10 @@ def _add_extended_args(engine_config: EngineConfig) -> list[str]:  # noqa: C901,
         ("cache_ram", "--cache-ram"),
         ("threads_http", "--threads-http"),
     ]
+    _ec = cast(dict[str, Any], engine_config)
     for key, flag in ext_pairs:
         if key in engine_config:
-            args.extend([flag, str(engine_config[key])])
+            args.extend([flag, str(_ec[key])])
     if engine_config.get("lookup_cache_dynamic"):
         args.extend(
             ["--lookup-cache-dynamic", str(engine_config["lookup_cache_dynamic"])]

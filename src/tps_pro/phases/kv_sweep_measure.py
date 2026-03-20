@@ -13,7 +13,7 @@ import random
 import re
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import DEFAULT_CONTEXT_SIZE, HTTP_OK
 from ..engine import (

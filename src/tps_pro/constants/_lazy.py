@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import Callable, Generic, TypeVar, overload
+from collections.abc import Iterator, Sequence
+from typing import Callable, TypeVar, overload
 
 T = TypeVar("T")
 
 
-class _LazyJsonList(Generic[T]):
+class _LazyJsonList(Sequence[T]):
     """Lazy-loading list-like wrapper backed by an lru_cache loader.
 
     Replaces the former ``_LazyQualityGatePrompts``, ``_LazyQualityTasks``,

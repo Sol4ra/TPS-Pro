@@ -23,7 +23,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import HTTP_FORBIDDEN, HTTP_OK
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import optuna
 
@@ -204,7 +204,7 @@ def phase_speculation(  # noqa: C901, PLR0915
         return PhaseReturnDict(best_params=best.params, phase_name="speculation")
 
     if base_config is None:
-        base_config = dict(ctx.naked_engine)
+        base_config = cast(EngineConfig, dict(ctx.naked_engine))
 
     logger.debug("Speculation base_config keys: %s", list(base_config.keys()))
     baseline, baseline_score = setup_baseline_server(ctx, base_config, "Speculation")
@@ -241,7 +241,7 @@ def phase_speculation(  # noqa: C901, PLR0915
             trial, draft_model, search_params=_cfg_search, lock=_cfg_lock
         )
         config, params_short = _build_spec_config(
-            base_config, params, ctx.lookup_cache_file, draft_model
+            cast(dict, base_config), params, ctx.lookup_cache_file, draft_model
         )
 
         cached = check_and_mark_duplicate_trial(trial)
@@ -251,7 +251,7 @@ def phase_speculation(  # noqa: C901, PLR0915
         _clear_lookup_cache_if_needed(params["use_lookup_cache"], ctx.lookup_cache_file)
 
         perf, score = run_server_trial(
-            ctx, trial, config, params_short, best.value, is_pareto
+            ctx, trial, cast(EngineConfig, config), params_short, best.value, is_pareto
         )
         if perf is None:
             return (0.0, VRAM_FAILURE_PENALTY, 0.0) if is_pareto else 0.0
@@ -277,4 +277,6 @@ def phase_speculation(  # noqa: C901, PLR0915
     )
     returned_params, _ = print_phase_summary(ctx, summary_ctx)
     clear_param_cache(study.study_name)
-    return PhaseReturnDict(best_params=returned_params, phase_name="speculation")
+    return PhaseReturnDict(
+        best_params=cast(dict[str, Any], returned_params), phase_name="speculation"
+    )

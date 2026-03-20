@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from ..constants import (
     QUALITY_GATE_CEILING,
@@ -35,7 +36,9 @@ def measure_quality_gate(ctx: AppContext, is_baseline: bool = False) -> float:  
     if raw_metrics is None:
         metrics = None
     elif isinstance(raw_metrics, dict):
-        metrics = TokenUncertaintyResult.from_dict(raw_metrics)
+        metrics = cast(
+            TokenUncertaintyResult, TokenUncertaintyResult.from_dict(raw_metrics)
+        )
     else:
         metrics = raw_metrics
     if metrics is None:
@@ -58,12 +61,16 @@ def measure_quality_gate(ctx: AppContext, is_baseline: bool = False) -> float:  
     # This path is hit when test mocks or older serialized state set
     # quality_baseline as a plain dict instead of TokenUncertaintyResult.
     if isinstance(ctx.quality_baseline, dict):
-        ctx.quality_baseline = TokenUncertaintyResult.from_dict(ctx.quality_baseline)
+        ctx.quality_baseline = cast(
+            TokenUncertaintyResult,
+            TokenUncertaintyResult.from_dict(ctx.quality_baseline),
+        )
 
     # Signal 1: uncertain token count increase
     # When baseline has very few uncertain tokens, use a floor
     # based on total token count to avoid extreme sensitivity
     # (e.g., going from 0->3 out of 1698 shouldn't be a cliff)
+    assert ctx.quality_baseline is not None
     base_uc = ctx.quality_baseline.uncertain_count
     uc_floor = max(1, int(ctx.quality_baseline.total_tokens * 0.01))  # 1% floor
     base_uc = max(base_uc, uc_floor)

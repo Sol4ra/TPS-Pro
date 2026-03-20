@@ -105,7 +105,11 @@ def launch_dashboard(ctx: AppContext) -> subprocess.Popen | None:
     startup_check_delay = 3.0
     time.sleep(startup_check_delay)
     if proc.poll() is not None:
-        stderr = proc.stderr.read().decode("utf-8", errors="replace")
+        stderr = (
+            proc.stderr.read().decode("utf-8", errors="replace")
+            if proc.stderr is not None
+            else ""
+        )
         logger.warning("  [!] Dashboard failed to start: %s", stderr[:500])
         return None
 

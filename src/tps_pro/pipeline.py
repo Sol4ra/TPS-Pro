@@ -24,7 +24,9 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Optional, cast
+
+from typing_extensions import TypeAlias
 
 from .constants import DEFAULT_MAX_GPU_LAYERS
 from .engine import (
@@ -52,7 +54,7 @@ from .phases import (
     phase_workload_sim,
 )
 from .pipeline_config import PhaseConfig, PipelineConfig
-from .result_types import EngineConfig, PhaseReturnDict
+from .result_types import ArchConfig, EngineConfig, PhaseReturnDict
 from .search import ensure_results_dir, load_phase_results
 from .state import (
     AppContext,
@@ -92,7 +94,7 @@ __all__ = [
 # ============================================================
 
 
-def _detect_architecture(gguf_path: Path) -> dict[str, Any]:
+def _detect_architecture(gguf_path: Path) -> ArchConfig:
     """Detect and log the GGUF model architecture."""
     arch_info = detect_gguf_architecture(str(gguf_path))
     logger.info("Architecture: %s", arch_info["type"])
@@ -156,7 +158,7 @@ def _build_model_context(gguf_path: Path, per_model_results: Path) -> AppContext
     fully initialized context ready for ``run_full_pipeline``.
     """
     arch_info = _detect_architecture(gguf_path)
-    model_config = _build_model_config(gguf_path, arch_info, per_model_results)
+    model_config = _build_model_config(gguf_path, dict(arch_info), per_model_results)
 
     model_ctx = create_context(model_config)
     model_ctx.config = model_config
@@ -366,7 +368,7 @@ def _validated_config_merge(
         dropped = [k for k, v in phase_params.items() if v is None]
         logger.debug("Phase %s: dropped None-valued keys: %s", phase_name, dropped)
 
-    return {**base_config, **clean_params}
+    return cast(EngineConfig, {**base_config, **clean_params})
 
 
 def _extract_best_params(
@@ -508,7 +510,7 @@ def _generate_reports(ctx: AppContext) -> None:
 # ============================================================
 
 
-_PhaseHandlerReturn = PhaseReturnDict | None
+_PhaseHandlerReturn: TypeAlias = Optional[PhaseReturnDict]
 
 # Type alias for phase dispatch handlers
 _PhaseHandler = Callable[
@@ -673,7 +675,7 @@ def _dispatch_phase(
     name = phase_cfg.phase
 
     # Build config with global flags applied
-    base = {**best_config, **pipeline_config.global_flags}
+    base = cast(EngineConfig, {**best_config, **pipeline_config.global_flags})
 
     handler = _PHASE_DISPATCH.get(name)
     if handler is None:
@@ -765,14 +767,14 @@ def _merge_phase_result(
     Returns:
         New merged config dict.
     """
-    phase_best = _extract_best_params(result_data)
+    phase_best = _extract_best_params(cast(Optional[PhaseReturnDict], result_data))
     if phase_best is None:
         cached = load_phase_results(ctx, phase_name)
         if cached and "best_params" in cached:
             phase_best = cached["best_params"]
     if phase_best:
         return _validated_config_merge(best_config, phase_best, phase_name)
-    return {**best_config}
+    return cast(EngineConfig, {**best_config})
 
 
 # ============================================================
@@ -889,7 +891,9 @@ def run_full_pipeline(  # noqa: C901, PLR0912, PLR0915
         )
 
     # Build initial best_config from naked_engine + global flags
-    best_config = pipeline_cfg.build_base_config(dict(ctx.naked_engine))
+    best_config: EngineConfig = cast(
+        EngineConfig, pipeline_cfg.build_base_config(dict(ctx.naked_engine))
+    )
 
     # --- Config-driven phase loop ---
     for phase_idx, phase_cfg in enumerate(enabled):
@@ -907,12 +911,13 @@ def run_full_pipeline(  # noqa: C901, PLR0912, PLR0915
             logger.warning("Model timeout reached. Skipping %s.", name)
             continue
 
-        result = _run_phase(
-            name,
-            lambda pc=phase_cfg, bc=best_config: _dispatch_phase(
-                pc, ctx, bc, pipeline_cfg
-            ),
-        )
+        def _phase_fn(
+            pc: PhaseConfig = phase_cfg,
+            bc: EngineConfig = best_config,
+        ) -> _PhaseHandlerReturn:
+            return _dispatch_phase(pc, ctx, bc, pipeline_cfg)
+
+        result = _run_phase(name, _phase_fn)
 
         best_config = _merge_phase_result(best_config, result, phase_cfg.phase, ctx)
 

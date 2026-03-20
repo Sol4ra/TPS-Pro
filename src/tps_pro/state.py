@@ -59,10 +59,10 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-import requests
-from requests.adapters import HTTPAdapter
+import requests  # type: ignore[import-untyped]
+from requests.adapters import HTTPAdapter  # type: ignore[import-untyped]
 from urllib3.util.retry import Retry
 
 from .constants import (
@@ -607,7 +607,7 @@ def _load_config() -> dict[str, Any]:
             logger.warning("Ignoring unknown config key: %r", k)
             continue
         if isinstance(v, dict) and isinstance(config.get(k), dict):
-            config[k].update(v)
+            cast(dict[str, Any], config[k]).update(v)
         else:
             config[k] = v
 
@@ -623,7 +623,7 @@ def _load_config() -> dict[str, Any]:
             config["port"] = _DEFAULTS["port"]
 
     # Canonicalize results_dir early for consistent downstream paths
-    config["results_dir"] = str(Path(config["results_dir"]).resolve())
+    config["results_dir"] = str(Path(str(config["results_dir"])).resolve())
 
     # Layer 2: CLI args override everything
     config = _merge_cli_args(config, args)
@@ -706,7 +706,7 @@ def update_naked_engine(ctx: AppContext, **kwargs: Any) -> None:
         ctx: Application context whose naked_engine will be replaced.
         **kwargs: Key-value pairs to merge into the new naked_engine dict.
     """
-    ctx.naked_engine = {**ctx.naked_engine, **kwargs}
+    ctx.naked_engine = cast("NakedEngineConfig", {**ctx.naked_engine, **kwargs})
 
 
 def rebuild_ctx(config: dict) -> AppContext:

@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import struct
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from .result_types import ArchConfig
 
@@ -159,11 +159,11 @@ def detect_model_layers(model_path: str | Path) -> int | None:
 
 def detect_gguf_architecture(model_path: str | Path) -> ArchConfig:
     """Read GGUF metadata to detect model architecture (moe vs dense)."""
-    arch_info = {"type": "dense"}
+    arch_info: dict[str, Any] = {"type": "dense"}
     try:
         metadata = read_gguf_metadata(model_path)
         if not metadata:
-            return arch_info
+            return cast(ArchConfig, arch_info)
 
         general_arch = metadata.get("general.architecture", "")
         num_experts = metadata.get(f"{general_arch}.expert_count")
@@ -177,7 +177,7 @@ def detect_gguf_architecture(model_path: str | Path) -> ArchConfig:
             }
     except (OSError, struct.error, ValueError) as e:
         logger.warning("Could not read GGUF metadata for architecture detection: %s", e)
-    return arch_info
+    return cast(ArchConfig, arch_info)
 
 
 def detect_skippable_flags(model_path: str | Path, n_gpu_layers: int) -> set[str]:
@@ -191,7 +191,7 @@ def detect_skippable_flags(model_path: str | Path, n_gpu_layers: int) -> set[str
     """
     import sys
 
-    skip = set()
+    skip: set[str] = set()
     try:
         metadata = read_gguf_metadata(model_path)
         if not metadata:

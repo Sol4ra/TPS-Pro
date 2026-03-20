@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import typing
 import warnings
-from typing import Any
+from typing import Any, cast
 
 
 class _DictAccessMixin:
@@ -22,6 +22,10 @@ class _DictAccessMixin:
     # Cache for typing.get_type_hints() results, keyed by class.
     # Avoids re-evaluating string annotations on every from_dict() call.
     _type_hints_cache: dict[type, dict[str, Any]] = {}
+
+    # Per-class deprecation warning flags (overridden per subclass).
+    _bracket_warned: bool = False
+    _get_warned: bool = False
 
     def __getitem__(self, key: str) -> Any:
         # Fast path: skip warning machinery entirely for classes that already warned.
@@ -92,7 +96,7 @@ class _DictAccessMixin:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize this frozen dataclass to a plain dict via dataclasses.asdict."""
-        return dataclasses.asdict(self)
+        return dataclasses.asdict(cast(Any, self))
 
     @classmethod
     def from_dict(cls, data: dict) -> _DictAccessMixin:
@@ -108,7 +112,7 @@ class _DictAccessMixin:
         """
         kwargs: dict = {}
         type_hints = cls._get_type_hints()
-        for f in dataclasses.fields(cls):
+        for f in dataclasses.fields(cast(Any, cls)):
             if f.name in data:
                 kwargs[f.name] = data[f.name]
             elif f.default is not dataclasses.MISSING:

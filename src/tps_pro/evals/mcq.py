@@ -7,6 +7,8 @@ import logging
 import math
 import re
 import time
+from collections.abc import Sequence
+from typing import cast
 
 import requests
 
@@ -96,7 +98,7 @@ def _extract_answer_logprob(data: dict, correct_letter: str) -> float | None:
 def measure_quality(
     ctx: AppContext,
     sampling_params: SamplingParams,
-    tasks: list[tuple[str, str, str]] = QUALITY_TASKS,
+    tasks: Sequence[tuple[str, str, str]] = QUALITY_TASKS,
     target_to_beat: float | None = None,
 ) -> QualityResult:
     """3-signal quality eval: Correctness (40%) + Confidence (40%) + Efficiency (20%).
@@ -117,7 +119,7 @@ def measure_quality(
             oai_params["max_tokens"] = v
         else:
             oai_params[k] = v
-    max_tokens = oai_params.pop("max_tokens", 1024)
+    max_tokens = cast(int, oai_params.pop("max_tokens", 1024))
 
     if HAS_AIOHTTP:
         return _measure_quality_async(ctx, tasks, max_tokens, oai_params)
@@ -234,7 +236,7 @@ def _eval_single_task(  # noqa: PLR0913
 
 def _measure_quality_sequential(
     ctx: AppContext,
-    tasks: list[tuple[str, str, str]],
+    tasks: Sequence[tuple[str, str, str]],
     max_tokens: int,
     oai_params: dict,
     target_to_beat: float | None = None,
@@ -341,7 +343,7 @@ async def _eval_one_async(  # noqa: PLR0913
 
 async def _run_async_quality_tasks(
     server_url: str,
-    tasks: list[tuple[str, str, str]],
+    tasks: Sequence[tuple[str, str, str]],
     max_tokens: int,
     oai_params: dict,
 ) -> QualityResult:
@@ -378,7 +380,7 @@ async def _run_async_quality_tasks(
 
 def _measure_quality_async(
     ctx: AppContext,
-    tasks: list[tuple[str, str, str]],
+    tasks: Sequence[tuple[str, str, str]],
     max_tokens: int,
     oai_params: dict,
 ) -> QualityResult:

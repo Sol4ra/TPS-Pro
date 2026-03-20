@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import math
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import (
     CONCURRENT_REQUEST_TIMEOUT,
@@ -117,7 +117,7 @@ def _compute_kl_divergence(
 
 
 def measure_kl_divergence(
-    ctx: AppContext, baseline_cache: list[dict[str, float] | None] = None
+    ctx: AppContext, baseline_cache: list[dict[str, float] | None] | None = None
 ) -> KLResult:
     """Measure KL-divergence against a cached baseline.
 
@@ -135,10 +135,15 @@ def measure_kl_divergence(
         return KLResult(distributions=None, kl_divergence=None)
 
     if baseline_cache is None:
-        return KLResult(distributions=dists, kl_divergence=None)
+        distributions_out: list[dict[str, float] | None] = list(dists)
+        return KLResult(distributions=distributions_out, kl_divergence=None)
 
-    kl_div = _compute_kl_divergence(baseline_cache, dists)
-    return KLResult(distributions=dists, kl_divergence=kl_div)
+    filtered_baseline: list[dict[str, float]] = [
+        d for d in baseline_cache if d is not None
+    ]
+    kl_div = _compute_kl_divergence(filtered_baseline, dists)
+    distributions: list[dict[str, float] | None] = list(dists)
+    return KLResult(distributions=distributions, kl_divergence=kl_div)
 
 
 def kl_quality_factor(kl_div: float | None) -> float:

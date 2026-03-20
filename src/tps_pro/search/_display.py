@@ -89,7 +89,11 @@ def print_trial_result(  # noqa: PLR0913
     """
     from ..measurement import compute_score
 
-    score = final_score if final_score is not None else compute_score(perf)
+    score = (
+        final_score
+        if final_score is not None
+        else (compute_score(perf) if perf is not None else 0.0)
+    )
     is_new_best = score > best_score
     if is_new_best:
         best_score = score

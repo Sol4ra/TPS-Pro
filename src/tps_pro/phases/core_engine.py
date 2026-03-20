@@ -15,7 +15,7 @@ import dataclasses
 import logging
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import optuna
 
@@ -290,8 +290,8 @@ def _build_ab_flags(skip_flags: set) -> tuple[dict, list]:
     pre-determined (skipped or hardcoded) and ab_flags contains tuples
     of (flag_name, candidates, default_if_skipped) to test.
     """
-    winners = {}
-    ab_flags = []
+    winners: dict[str, Any] = {}
+    ab_flags: list[Any] = []
 
     # Candidate order matters: first value wins ties, so list the
     # simpler/safer default first (off before on, False before True)
@@ -702,13 +702,16 @@ def phase_core_engine(  # noqa: C901
     if "repack" in _skip:
         gguf_defaults["repack"] = True  # ON by default in llama.cpp
     _upstream = base_config if base_config is not None else dict(ctx.naked_engine)
-    base_config = {
-        **_upstream,
-        "flash_attn": "on",
-        "kv_cache_type": "f16",
-        "no_mmap": True,
-        **gguf_defaults,
-    }
+    base_config = cast(
+        EngineConfig,
+        {
+            **_upstream,
+            "flash_attn": "on",
+            "kv_cache_type": "f16",
+            "no_mmap": True,
+            **gguf_defaults,
+        },
+    )
 
     logger.debug("Starting baseline server...")
     kill_server(ctx)
@@ -780,8 +783,9 @@ def phase_core_engine(  # noqa: C901
     # Merge Layer 1 winners into returned params
     if returned_params is None:
         returned_params = {}
+    _returned: dict[str, Any] = cast(dict[str, Any], returned_params)
     for k, v in layer1_winners.items():
-        if k not in returned_params:
-            returned_params[k] = v
+        if k not in _returned:
+            _returned[k] = v
 
-    return PhaseReturnDict(best_params=returned_params, phase_name="core_engine")
+    return PhaseReturnDict(best_params=_returned, phase_name="core_engine")

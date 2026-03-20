@@ -17,8 +17,9 @@ Both live in this module because they share the same dependency set
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import (
     CONCURRENT_REQUEST_TIMEOUT,
@@ -64,10 +65,10 @@ def phase_workload_sim(  # noqa: C901, PLR0912, PLR0915
     logger.info("")
 
     if base_config is None:
-        base_config = dict(ctx.naked_engine)
+        base_config = cast(EngineConfig, dict(ctx.naked_engine))
 
     # Start server with full optimized config + cache-reuse enabled
-    config = {**base_config, "cache_reuse": 256}
+    config = cast(EngineConfig, {**base_config, "cache_reuse": 256})
     logger.info("Starting server with cache-reuse enabled...")
     kill_server(ctx)
     proc, status = boot_server_with_jinja_recovery(ctx, config)
@@ -317,4 +318,6 @@ def phase_context_sweep(
         "context_sweep",
         {"contexts": {str(k): v for k, v in results.items()}, "n_runs": n_runs},
     )
-    return PhaseReturnDict(best_params=results, phase_name="context_sweep")
+    return PhaseReturnDict(
+        best_params=cast(dict[str, Any], results), phase_name="context_sweep"
+    )

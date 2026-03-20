@@ -16,7 +16,9 @@ import logging
 import sys
 import time
 from datetime import datetime
+from io import TextIOWrapper
 from pathlib import Path
+from typing import Optional
 
 from ..constants.engine import MIN_SPLIT_FRACTION as _MIN_SPLIT_FRACTION
 from ..result_types import EngineConfig
@@ -66,6 +68,7 @@ class LogTee:
         log_path = Path(results_dir) / f"optimize_{ts}.log"
         self.log_path = str(log_path)
         log_path.parent.mkdir(parents=True, exist_ok=True)
+        self._file: Optional[TextIOWrapper] = None
         try:
             self._file = open(log_path, "w", encoding="utf-8", errors="replace")
         except OSError:

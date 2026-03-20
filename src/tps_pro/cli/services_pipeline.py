@@ -12,7 +12,9 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TypedDict
+from typing import Dict, List, TypedDict, Union
+
+from typing_extensions import TypeAlias
 
 from ..constants import SCORE_VERSION
 from ..engine.util import read_json_safe
@@ -23,12 +25,14 @@ from .services_config import DatabaseResetError
 logger = logging.getLogger(__name__)
 
 #: Phase config values are heterogeneous JSON-derived scalars.
-PhaseConfigValue = str | int | float | bool | None
-PhaseConfig = dict[str, PhaseConfigValue]
+PhaseConfigValue: TypeAlias = Union[str, int, float, bool, None]
+PhaseConfig: TypeAlias = Dict[str, PhaseConfigValue]
 
 #: Phase detail dicts loaded from results JSON files.
-PhaseDetailValue = str | int | float | bool | list[object] | dict[str, object] | None
-PhaseDetail = dict[str, PhaseDetailValue]
+PhaseDetailValue: TypeAlias = Union[
+    str, int, float, bool, List[object], Dict[str, object], None
+]
+PhaseDetail: TypeAlias = Dict[str, PhaseDetailValue]
 
 
 class ModelResultSummary(TypedDict):
@@ -173,7 +177,7 @@ def find_resume_point(progress: list[PhaseProgress]) -> int | None:
     return None
 
 
-def build_phase_base_config(ctx: AppContext, phase_name: str) -> PhaseConfig:
+def build_phase_base_config(ctx: AppContext, phase_name: str) -> Dict[str, object]:
     """Build a base config by merging naked_engine with saved phase results.
 
     The merge order follows the pipeline dependency chain so that later

@@ -16,6 +16,7 @@ import io
 import logging
 import subprocess
 import sys
+from typing import Any, cast
 
 from ..constants import BENCH_SUBPROCESS_TIMEOUT
 from ..errors import BenchOOMError
@@ -64,9 +65,10 @@ def _build_bench_cmd(  # noqa: C901
         "tensor_split": "-ts",
         "override_tensor": "-ot",
     }
+    _ec = cast(dict[str, Any], engine_config)
     for key, flag in flag_map.items():
         if key in engine_config:
-            cmd.extend([flag, str(engine_config[key])])
+            cmd.extend([flag, str(_ec[key])])
     if "kv_cache_type" in engine_config:
         cmd.extend(["-ctk", engine_config["kv_cache_type"]])
         cmd.extend(["-ctv", engine_config["kv_cache_type"]])

@@ -12,7 +12,9 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, Dict, TypedDict, Union, cast
+
+from typing_extensions import TypeAlias
 
 from ..constants import (
     DEFAULT_CONTEXT_SIZE,
@@ -54,7 +56,7 @@ _TOGGLE_REGISTRY: dict[str, str] = {
 # ============================================================
 
 #: Application-wide config dict -- values are heterogeneous by design.
-ConfigDict = dict[str, str | float | int | bool | None]
+ConfigDict: TypeAlias = Dict[str, Any]
 
 
 class MoeArchConfig(TypedDict):
@@ -95,7 +97,7 @@ class SystemInfo:
     arch_type: str  # "MoE" or "Dense"
     arch_detail: str  # e.g. "8 experts, 16 max"
     gpu_layers: str  # e.g. "32/32"
-    gpus: list[dict] = field(default_factory=list)
+    gpus: list[Any] = field(default_factory=list)
     cpu_threads: int = 0
     numa_nodes: int = 1
     model_size_gb: float = 0.0
@@ -247,7 +249,8 @@ def detect_architecture(model_path: Path) -> MoeArchConfig | DenseArchConfig | N
     try:
         from ..models import detect_gguf_architecture
 
-        return detect_gguf_architecture(str(model_path))
+        arch = detect_gguf_architecture(str(model_path))
+        return cast(Union[MoeArchConfig, DenseArchConfig], arch)
     except (ImportError, AttributeError):
         return None
 

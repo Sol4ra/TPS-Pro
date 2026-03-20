@@ -7,8 +7,9 @@ import logging
 import random
 import re
 import threading
+from typing import cast
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import (
     HTTP_OK,
@@ -356,12 +357,15 @@ def _build_niah_config(
     Speculative decoding params are stripped because repetitive filler text
     poisons the N-gram cache, causing the draft model to hallucinate.
     """
-    config: EngineConfig = {
-        k: v
-        for k, v in base_config.items()
-        if not any(k.startswith(p) for p in _NIAH_STRIP_PREFIXES)
-        and k not in _NIAH_STRIP_KEYS
-    }
+    config: EngineConfig = cast(
+        EngineConfig,
+        {
+            k: v
+            for k, v in base_config.items()
+            if not any(k.startswith(p) for p in _NIAH_STRIP_PREFIXES)
+            and k not in _NIAH_STRIP_KEYS
+        },
+    )
     config["kv_cache_type"] = kv_cache_type
     config["flash_attn"] = "on"
     config["context"] = int(max(context_sizes) * 1.5)
@@ -576,17 +580,17 @@ def phase_niah(
         )
 
     if base_config is None:
-        base_config = dict(ctx.naked_engine)
+        base_config = cast(EngineConfig, dict(ctx.naked_engine))
         compute_src = load_phase_results(ctx, "compute_audit") or load_phase_results(
             ctx, "compute"
         )
         if compute_src:
-            base_config.update(compute_src["best_params"])
+            cast(dict, base_config).update(compute_src["best_params"])
         moe_src = load_phase_results(ctx, "moe_combined") or load_phase_results(
             ctx, "moe"
         )
         if moe_src and "best_params" in moe_src:
-            base_config.update(moe_src["best_params"])
+            cast(dict, base_config).update(moe_src["best_params"])
 
     kv_types = ["f16", "q8_0", "q5_1", "q4_0"]
     kv_results = _run_kv_sweep(ctx, kv_types, base_config)

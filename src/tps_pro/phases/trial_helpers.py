@@ -20,7 +20,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 # Note: trial_helpers uses both optuna.Trial (live trials in objectives) and
 # optuna.trial.FrozenTrial (completed trials in summaries). Functions that
@@ -238,7 +238,7 @@ def finalize_trial(  # noqa: PLR0913
             vram_mb or 0,
             params_short,
         )
-        return objectives, best_score
+        return cast(tuple[float, ...], objectives), best_score
 
 
 def recover_best_score(study: optuna.Study, score_fn: Callable[..., float]) -> float:

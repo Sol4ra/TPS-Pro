@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, Sequence
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import CONCURRENT_REQUEST_TIMEOUT, HTTP_OK
 from ..state import AppContext

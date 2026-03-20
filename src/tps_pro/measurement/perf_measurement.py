@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any
+from typing import Any, cast
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import (
     ADAPTIVE_THRESHOLD,
@@ -74,9 +74,9 @@ def _to_perf_result(obj: PerfResult | PerfSample | dict[str, Any]) -> PerfResult
     if isinstance(obj, PerfResult):
         return obj
     if isinstance(obj, dict):
-        return PerfResult.from_dict(obj)
+        return cast(PerfResult, PerfResult.from_dict(obj))
     # PerfSample or other dataclass with to_dict
-    return PerfResult.from_dict(obj.to_dict())
+    return cast(PerfResult, PerfResult.from_dict(obj.to_dict()))
 
 
 def _capture_vram(ctx: AppContext) -> tuple[float | None, float | None]:

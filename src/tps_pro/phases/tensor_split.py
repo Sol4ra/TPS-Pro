@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
+from typing import cast
 
 from ..engine import (
     generate_tensor_splits,
@@ -55,7 +56,7 @@ def phase_tensor_split(  # noqa: PLR0915
         return None
 
     if base_config is None:
-        base_config = dict(ctx.naked_engine)
+        base_config = cast(EngineConfig, dict(ctx.naked_engine))
 
     logger.info("=" * 60)
     logger.info("Tensor Split")
@@ -77,7 +78,7 @@ def phase_tensor_split(  # noqa: PLR0915
 
     for trial_num, split in enumerate(candidates, 1):
         split_str = ",".join(str(s) for s in split)
-        config = {**base_config, "tensor_split": split_str}
+        config = cast(EngineConfig, {**base_config, "tensor_split": split_str})
         kill_server(ctx)
         proc = start_server(ctx, config)
         if wait_for_server(ctx, proc=proc) != "ok":

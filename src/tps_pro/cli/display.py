@@ -16,6 +16,7 @@ from .services import (
     get_phase_detail,
     get_phase_results,
 )
+from .services_pipeline import ModelResultSummary
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def view_results() -> None:
         print(f"  [!] Error viewing results: {exc}")
 
 
-def _model_selection_loop(model_list: list[dict]) -> None:
+def _model_selection_loop(model_list: list[ModelResultSummary]) -> None:
     """Let user pick a model to view its phase results."""
     from .menu import clear_screen
 

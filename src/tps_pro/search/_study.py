@@ -108,13 +108,14 @@ def get_positive_completed_trials(
     """
     from ._callbacks import trial_scalar_value
 
-    return [
-        t
-        for t in study.trials
-        if t.state == optuna.trial.TrialState.COMPLETE
-        and trial_scalar_value(t) is not None
-        and trial_scalar_value(t) > 0
-    ]
+    result = []
+    for t in study.trials:
+        if t.state != optuna.trial.TrialState.COMPLETE:
+            continue
+        v = trial_scalar_value(t)
+        if v is not None and v > 0:
+            result.append(t)
+    return result
 
 
 # ---------------------------------------------------------------------------

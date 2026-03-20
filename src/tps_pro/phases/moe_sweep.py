@@ -151,6 +151,8 @@ def _recheck_neighbors(  # noqa: PLR0913
         if perf is None:
             continue
 
+        if score is None:
+            continue
         results.append((moe_val, perf, score))
         is_best = score > best_score
         if is_best:
@@ -249,13 +251,15 @@ def phase_moe_sweep(  # noqa: C901, PLR0912, PLR0915
         sweep_values.append(sweep_max)
 
     results = []  # list of (n_cpu_moe, perf, score)
-    best_so_far = baseline_score
+    best_so_far: float = baseline_score if baseline_score is not None else 0.0
 
     for moe_val in sweep_values:
         perf, score = _measure_moe_value(ctx, base_config, moe_val)
         if perf is None:
             continue
 
+        if score is None:
+            continue
         results.append((moe_val, perf, score))
         is_best = score > best_so_far
         if is_best:
@@ -269,7 +273,8 @@ def phase_moe_sweep(  # noqa: C901, PLR0912, PLR0915
         return None
 
     # --- Pick initial winner and recheck neighbors ---
-    best_moe, best_perf, best_score = max(results, key=lambda r: r[2])
+    best_moe, best_perf, best_score = max(results, key=lambda r: r[2] or 0.0)
+    assert best_score is not None
     best_moe, best_perf, best_score = _recheck_neighbors(
         ctx,
         base_config,
@@ -279,6 +284,7 @@ def phase_moe_sweep(  # noqa: C901, PLR0912, PLR0915
         results,
     )
 
+    assert baseline_score is not None
     _log_results_summary(baseline, baseline_score, best_perf, best_score, best_moe)
 
     # --- Save results ---

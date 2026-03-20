@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
 from .base import _DictAccessMixin
 
@@ -96,6 +96,6 @@ class PhaseResult(_DictAccessMixin):
             best_params=data.get("best_params", {}),
             param_importance=data.get("param_importance", {}),
             duration_minutes=data.get("duration_minutes", 0.0),
-            all_trials=trials,
+            all_trials=cast(list[TrialSummary], trials),
             score_version=data.get("score_version"),
         )

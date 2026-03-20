@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 
 from ..constants import (
     HAS_AIOHTTP,
@@ -15,7 +16,7 @@ from ..engine import boot_server_with_jinja_recovery
 from ..evals import measure_quality
 from ..measurement import get_best_trial
 from ..pipeline_config import PhaseConfig
-from ..result_types import PhaseReturnDict
+from ..result_types import EngineConfig, PhaseReturnDict, SamplingParams
 from ..search import (
     ProgressBarUpdateCallback,
     check_and_mark_duplicate_trial,
@@ -196,7 +197,9 @@ def _quality_objective(  # noqa: PLR0913, PLR0915
         logger.debug("  Quality: (duplicate, score:%.1f)", cached)
         return cached
 
-    score = measure_quality(ctx, params, target_to_beat=best.value).score
+    score = measure_quality(
+        ctx, cast(SamplingParams, params), target_to_beat=best.value
+    ).score
 
     marker = ""
     if score > best.value:
@@ -265,10 +268,12 @@ def phase_quality(  # noqa: C901, PLR0912, PLR0915
     p1a = load_phase_results(ctx, "moe_combined")
     if p1a:
         moe_cfg = get_moe_config(ctx, p1a)
-        server_config.update(moe_cfg)
+        cast(dict[str, Any], server_config).update(moe_cfg)
 
     # Remove None values
-    server_config = {k: v for k, v in server_config.items() if v is not None}
+    server_config = cast(
+        EngineConfig, {k: v for k, v in server_config.items() if v is not None}
+    )
 
     phases_loaded = [
         p
@@ -310,7 +315,7 @@ def phase_quality(  # noqa: C901, PLR0912, PLR0915
     baseline_score = measure_quality(
         ctx,
         {
-            "temperature": 0.4,
+            "temp": 0.4,
             "top_p": 0.95,
             "top_k": 40,
             "min_p": 0.05,

@@ -21,6 +21,7 @@ kv_sweep_measure.py. This module is the thin orchestration layer.
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from ..constants import DEFAULT_CONTEXT_SIZE
 from ..engine import kill_server
@@ -84,8 +85,9 @@ def phase_kv_context_sweep(
     logger.info("=" * 60)
     logger.info("")
 
-    effective_config = (
-        base_config if base_config is not None else dict(ctx.naked_engine)
+    effective_config = cast(
+        dict,
+        base_config if base_config is not None else dict(ctx.naked_engine),
     )
 
     # Override KV types from phase_config if provided

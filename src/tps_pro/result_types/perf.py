@@ -110,7 +110,7 @@ class ParetoObjectives(_DictAccessMixin):
         """Support tuple unpacking: tps, neg_vram, qf = objectives."""
         return iter(self._as_tuple)
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int):  # type: ignore[override]
         """Support positional indexing: objectives[0], objectives[1], objectives[2]."""
         return self._as_tuple[index]
 

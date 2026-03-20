@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import aiohttp as _aiohttp_type
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ..constants import (
     CONCURRENT_REQUEST_TIMEOUT,

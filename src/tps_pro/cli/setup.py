@@ -10,6 +10,7 @@ import copy
 import logging
 import os
 import sys
+from typing import Any
 
 from ..constants import DEFAULT_MAX_GPU_LAYERS
 from ..hardware import detect_gpus
@@ -35,7 +36,7 @@ def run_first_time_setup() -> None:
     from .wizard import first_run_setup
 
     new_config = first_run_setup()
-    merged = copy.deepcopy(_DEFAULTS)
+    merged: dict[str, Any] = copy.deepcopy(_DEFAULTS)
     for k, v in new_config.items():
         if isinstance(v, dict) and isinstance(merged.get(k), dict):
             merged[k].update(v)

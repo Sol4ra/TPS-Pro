@@ -140,7 +140,10 @@ class PhaseConfig:
 
     def to_dict(self) -> dict[str, Any]:  # noqa: C901
         """Serialize to dict, omitting empty/default fields."""
-        result = {"phase": self.phase, "display_name": self.display_name}
+        result: dict[str, Any] = {
+            "phase": self.phase,
+            "display_name": self.display_name,
+        }
         if not self.enabled:
             result["enabled"] = False
         if self.moe_only:
