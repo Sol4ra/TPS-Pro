@@ -39,6 +39,7 @@ class ServerProcess:
         default_factory=threading.Lock, compare=False, hash=False
     )
 
+
 # ---------------------------------------------------------------------------
 # GPU and hardware detection shape contracts (hardware.py)
 # ---------------------------------------------------------------------------

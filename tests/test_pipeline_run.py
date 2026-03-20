@@ -112,52 +112,73 @@ def _make_pipeline_config(
         PhaseConfig(phase="gpu_offload", display_name="GPU Offload"),
     ]
     if include_tensor_split:
-        phases.append(
-            PhaseConfig(phase="tensor_split", display_name="Tensor Split")
-        )
+        phases.append(PhaseConfig(phase="tensor_split", display_name="Tensor Split"))
     if is_moe:
         phases.append(
             PhaseConfig(
-                phase="moe_sweep", display_name="MoE Threads",
+                phase="moe_sweep",
+                display_name="MoE Threads",
                 moe_only=True,
             )
         )
     phases.append(
         PhaseConfig(
-            phase="kv_context_sweep", display_name="KV + Context Sweep",
+            phase="kv_context_sweep",
+            display_name="KV + Context Sweep",
             kv_types=["f16", "q8_0", "q4_0"],
         )
     )
     if include_ab_toggles:
         phases.append(
             PhaseConfig(
-                phase="ab_toggles", display_name="A/B Toggles",
+                phase="ab_toggles",
+                display_name="A/B Toggles",
                 test_flags=[
-                    "op_offload", "prio", "prio_batch",
-                    "no_mmap", "mlock", "repack", "swa_full",
-                    "numa", "cpu_strict", "cpu_strict_batch",
+                    "op_offload",
+                    "prio",
+                    "prio_batch",
+                    "no_mmap",
+                    "mlock",
+                    "repack",
+                    "swa_full",
+                    "numa",
+                    "cpu_strict",
+                    "cpu_strict_batch",
                 ],
             )
         )
-    phases.extend([
-        PhaseConfig(
-            phase="core_engine", display_name="Core Engine",
-            trials=100,
-            search_params=[
-                "threads", "threads_batch", "batch_size",
-                "ubatch_size", "flash_attn", "poll", "poll_batch",
-            ],
-        ),
-        PhaseConfig(
-            phase="speculation", display_name="Speculation", trials=40,
-        ),
-        PhaseConfig(
-            phase="workload_sim", display_name="Workload Sim",
-        ),
-        PhaseConfig(
-            phase="quality", display_name="Quality/Sampling", trials=60,
-        ),
-    ])
+    phases.extend(
+        [
+            PhaseConfig(
+                phase="core_engine",
+                display_name="Core Engine",
+                trials=100,
+                search_params=[
+                    "threads",
+                    "threads_batch",
+                    "batch_size",
+                    "ubatch_size",
+                    "flash_attn",
+                    "poll",
+                    "poll_batch",
+                ],
+            ),
+            PhaseConfig(
+                phase="speculation",
+                display_name="Speculation",
+                trials=40,
+            ),
+            PhaseConfig(
+                phase="workload_sim",
+                display_name="Workload Sim",
+            ),
+            PhaseConfig(
+                phase="quality",
+                display_name="Quality/Sampling",
+                trials=60,
+            ),
+        ]
+    )
     return PipelineConfig(global_flags={}, phases=phases)
 
 
@@ -170,8 +191,12 @@ class TestRunFullPipeline:
     """Tests for run_full_pipeline orchestration."""
 
     def _build_patches(
-        self, ctx_mock=None, config_dict=None, load_results=None,
-        detect_gpus_ret=None, pipeline_config=None,
+        self,
+        ctx_mock=None,
+        config_dict=None,
+        load_results=None,
+        detect_gpus_ret=None,
+        pipeline_config=None,
     ):
         """Return a dict of patch targets -> mock values for run_full_pipeline."""
         ctx_mock = ctx_mock or _make_mock_ctx()
@@ -463,7 +488,8 @@ class TestRunFullPipeline:
         ]
         pcfg = _make_pipeline_config(include_tensor_split=True)
         patches = self._build_patches(
-            detect_gpus_ret=two_gpus, pipeline_config=pcfg,
+            detect_gpus_ret=two_gpus,
+            pipeline_config=pcfg,
         )
         patches[f"{_P}.phase_tensor_split"] = MagicMock(
             side_effect=_track("tensor_split", None)

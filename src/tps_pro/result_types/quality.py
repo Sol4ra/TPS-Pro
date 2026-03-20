@@ -22,7 +22,6 @@ class QualityTaskResult(_DictAccessMixin):
     category: str | None = None
 
 
-
 @dataclass(frozen=True)
 class QualityResult(_DictAccessMixin):
     """Composite quality evaluation output from measure_quality.
@@ -47,7 +46,6 @@ class QualityResult(_DictAccessMixin):
         )
 
 
-
 @dataclass(frozen=True)
 class NIAHTestResult(_DictAccessMixin):
     """Single needle-in-a-haystack probe at a given context size and depth."""
@@ -57,7 +55,6 @@ class NIAHTestResult(_DictAccessMixin):
     passed: bool
     needle_idx: int = 0
     error: str | None = None
-
 
 
 @dataclass(frozen=True)
@@ -88,7 +85,6 @@ class NIAHResult(_DictAccessMixin):
         )
 
 
-
 @dataclass(frozen=True)
 class NIAHPhaseResult(_DictAccessMixin):
     """Full NIAH phase output from phase_niah, saved via save_phase_results."""
@@ -116,7 +112,6 @@ class NIAHPhaseResult(_DictAccessMixin):
         )
 
 
-
 @dataclass(frozen=True)
 class KLResult(_DictAccessMixin):
     """KL-divergence measurement from measure_kl_divergence.
@@ -131,7 +126,6 @@ class KLResult(_DictAccessMixin):
     def __iter__(self):
         """Support tuple unpacking: dists, kl_div = measure_kl_divergence(...)"""
         return iter((self.distributions, self.kl_divergence))
-
 
 
 @dataclass(frozen=True)
@@ -154,4 +148,3 @@ class PPLResult(_DictAccessMixin):
             baseline_ppl=data.get("baseline_ppl"),
             quality_factor=data.get("quality_factor"),
         )
-

@@ -440,7 +440,10 @@ class TestEditPhase:
         result = _do_edit_phase(config)
         assert result.phases[1].lock["threads"] == 8
 
-    @patch(f"{_MODULE}._input", side_effect=["2", "lock threads 8", "unlock threads", "done"])
+    @patch(
+        f"{_MODULE}._input",
+        side_effect=["2", "lock threads 8", "unlock threads", "done"],
+    )
     def test_unlock_param(self, mock_input):
         from tps_pro.cli.config_editor import _do_edit_phase
 

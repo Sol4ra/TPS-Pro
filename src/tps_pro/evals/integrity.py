@@ -117,9 +117,7 @@ def phase_reasoning_eval(ctx: AppContext, n_tasks: int = 5) -> float:
             "If all roses are flowers and some flowers fade"
             " quickly, can we conclude all roses fade"
             " quickly?",
-            _accept_checker(
-                ["no", "cannot conclude", "not necessarily"]
-            ),
+            _accept_checker(["no", "cannot conclude", "not necessarily"]),
         ),
         ("What is 17 * 23?", _accept_checker(["391"])),
         ("How many r's are in 'strawberry'?", _accept_checker(["3", "three"])),

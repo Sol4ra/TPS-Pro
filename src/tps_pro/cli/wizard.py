@@ -31,7 +31,9 @@ from .setup_binary import SetupBinaryError, ensure_llama_server
 # GGUF filename patterns to skip when scanning for models
 # (vision projectors, embeddings, etc.)
 _SKIP_PATTERNS = (
-    "mmproj", "embedding", "reranker",
+    "mmproj",
+    "embedding",
+    "reranker",
 )
 
 
@@ -133,7 +135,9 @@ def _resolve_architecture(model_path: Path) -> dict[str, Any] | None:
 
 
 def _ask_architecture(
-    model_path: Path | None = None, *, first_run: bool = False,
+    model_path: Path | None = None,
+    *,
+    first_run: bool = False,
 ) -> dict[str, Any] | None:
     """Prompt user to choose Dense or MoE. Returns config dict or None.
 
@@ -313,8 +317,10 @@ def _ask_models_folder() -> str:
 
         ggufs = sorted(
             [
-                f for f in folder_path.rglob("*.gguf")
-                if f.is_file() and not f.is_symlink()
+                f
+                for f in folder_path.rglob("*.gguf")
+                if f.is_file()
+                and not f.is_symlink()
                 and not any(s in f.name.lower() for s in _SKIP_PATTERNS)
             ],
             key=lambda f: f.stat().st_size,
@@ -326,7 +332,7 @@ def _ask_models_folder() -> str:
 
         print(f"\n  Found {len(ggufs)} model(s):\n")
         for i, gguf in enumerate(ggufs[:20]):  # Show max 20
-            size_gb = gguf.stat().st_size / (1024 ** 3)
+            size_gb = gguf.stat().st_size / (1024**3)
             rel = gguf.relative_to(folder_path)
             print(f"    [{i + 1}] {rel} ({size_gb:.1f} GB)")
 
@@ -348,10 +354,7 @@ def _ask_models_folder() -> str:
             selected = ggufs[0]
 
         size_gb = selected.stat().st_size / (1024**3)
-        print(
-            f"\n  [*] Selected: {selected.name}"
-            f" ({size_gb:.1f} GB)"
-        )
+        print(f"\n  [*] Selected: {selected.name} ({size_gb:.1f} GB)")
         return str(selected)
 
 
@@ -364,5 +367,3 @@ def _ask_path(step: str, prompt: str, must_exist: bool = False) -> str:
             print(f"        File not found: {path}")
             continue
         return path
-
-

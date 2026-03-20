@@ -51,9 +51,16 @@ DEFAULT_PHASES = [
         "display_name": "A/B Toggles",
         "enabled": True,
         "test_flags": [
-            "op_offload", "prio", "prio_batch",
-            "no_mmap", "mlock", "repack", "swa_full",
-            "numa", "cpu_strict", "cpu_strict_batch",
+            "op_offload",
+            "prio",
+            "prio_batch",
+            "no_mmap",
+            "mlock",
+            "repack",
+            "swa_full",
+            "numa",
+            "cpu_strict",
+            "cpu_strict_batch",
         ],
         "description": "Independent binary flag sweeps",
     },
@@ -63,8 +70,13 @@ DEFAULT_PHASES = [
         "enabled": True,
         "trials": 100,
         "search_params": [
-            "threads", "threads_batch", "batch_size",
-            "ubatch_size", "flash_attn", "poll", "poll_batch",
+            "threads",
+            "threads_batch",
+            "batch_size",
+            "ubatch_size",
+            "flash_attn",
+            "poll",
+            "poll_batch",
         ],
         "lock": {},
         "description": "Focused TPE search for correlated params",
@@ -75,8 +87,12 @@ DEFAULT_PHASES = [
         "enabled": True,
         "trials": 40,
         "search_params": [
-            "spec_type", "spec_ngram_n", "spec_ngram_m",
-            "spec_ngram_min_hits", "draft_max", "draft_min",
+            "spec_type",
+            "spec_ngram_n",
+            "spec_ngram_m",
+            "spec_ngram_min_hits",
+            "draft_max",
+            "draft_min",
             "draft_p_min",
         ],
         "lock": {},
@@ -185,9 +201,7 @@ class PipelineConfig:
     global_flags: dict[str, Any] = field(default_factory=dict)
     phases: list[PhaseConfig] = field(default_factory=list)
     scoring_weights: ScoringWeights = field(default_factory=ScoringWeights)
-    presets: dict[str, float] = field(
-        default_factory=lambda: dict(_DEFAULT_PRESETS)
-    )
+    presets: dict[str, float] = field(default_factory=lambda: dict(_DEFAULT_PRESETS))
 
     @classmethod
     def default(cls, is_moe: bool = False) -> PipelineConfig:
@@ -279,9 +293,7 @@ class PipelineConfig:
         # Only include scoring_weights if non-default
         default_weights = ScoringWeights()
         if self.scoring_weights != default_weights:
-            result["scoring_weights"] = (
-                self.scoring_weights.to_dict()
-            )
+            result["scoring_weights"] = self.scoring_weights.to_dict()
         # Only include presets if non-default
         if self.presets != _DEFAULT_PRESETS:
             result["presets"] = self.presets

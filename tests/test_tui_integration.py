@@ -76,7 +76,12 @@ _ALLOWED_ERROR_SUBSTRINGS = frozenset(
 def _run_menu(stdin_text: str, *, timeout: int = 15) -> subprocess.CompletedProcess:
     """Run the TUI harness with the given stdin and return the result."""
     _src_dir = str(Path(__file__).resolve().parent.parent / "src")
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1", "PYTHONPATH": _src_dir}
+    env = {
+        **os.environ,
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": _src_dir,
+    }
     return subprocess.run(
         [sys.executable, _HARNESS],
         input=stdin_text,

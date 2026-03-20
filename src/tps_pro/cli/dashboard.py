@@ -79,8 +79,7 @@ def launch_dashboard(ctx: AppContext) -> subprocess.Popen | None:
         # Cleanup: best-effort schema init -- tables may already exist or
         # the dummy study may have been concurrently deleted.  Non-fatal.
         logger.debug(
-            "Dashboard DB init skipped"
-            " (tables exist or study deleted): %s",
+            "Dashboard DB init skipped (tables exist or study deleted): %s",
             e,
         )
 

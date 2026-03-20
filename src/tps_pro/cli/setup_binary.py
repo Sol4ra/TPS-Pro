@@ -344,8 +344,7 @@ def _download_checksum(asset_url: str, asset_name: str) -> str | None:
             if is_valid:
                 return hex_digest
             logger.warning(
-                "SHA256 file found but content format"
-                " unexpected: %s",
+                "SHA256 file found but content format unexpected: %s",
                 content[:100],
             )
             return None
@@ -458,8 +457,7 @@ def download_and_extract(asset_url: str, target_dir: Path) -> Path:  # noqa: C90
         if target_dir.exists():
             shutil.rmtree(target_dir, ignore_errors=True)
         raise SetupBinaryError(
-            f"Extraction failed: {err}\n"
-            "Please download llama-server manually."
+            f"Extraction failed: {err}\nPlease download llama-server manually."
         ) from err
     finally:
         _cleanup_partial(tmp_zip)

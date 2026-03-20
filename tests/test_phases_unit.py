@@ -192,7 +192,10 @@ class TestQualityPhase:
 @pytest.mark.unit
 class TestMoeHelpers:
     @patch("tps_pro.phases.trial_helpers.wait_for_cooldown")
-    @patch("tps_pro.phases.trial_helpers.check_thermal_throttle", return_value=(False, 50.0))
+    @patch(
+        "tps_pro.phases.trial_helpers.check_thermal_throttle",
+        return_value=(False, 50.0),
+    )
     def test_thermal_gate_no_throttle(self, mock_check, mock_wait):
         """When not throttled, thermal_gate returns without waiting."""
         thermal_gate()
@@ -240,7 +243,10 @@ class TestTensorSplit:
         mock_load.return_value = {"best_split": [0.6, 0.4]}
         ctx = _make_ctx()
         result = phase_tensor_split(ctx, gpus=[{"index": 0}, {"index": 1}])
-        assert result == {"best_params": {"tensor_split": "0.6,0.4"}, "phase_name": "tensor_split"}
+        assert result == {
+            "best_params": {"tensor_split": "0.6,0.4"},
+            "phase_name": "tensor_split",
+        }
 
 
 # ===================================================================

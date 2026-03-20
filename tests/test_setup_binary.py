@@ -185,7 +185,10 @@ class TestMatchAsset:
         {"name": "llama-b1234-win-cuda-cu12.2-x64.zip", "browser_download_url": "url1"},
         {"name": "llama-b1234-win-vulkan-x64.zip", "browser_download_url": "url2"},
         {"name": "llama-b1234-win-x64.zip", "browser_download_url": "url3"},
-        {"name": "llama-b1234-linux-cuda-cu12.2-x64.zip", "browser_download_url": "url4"},
+        {
+            "name": "llama-b1234-linux-cuda-cu12.2-x64.zip",
+            "browser_download_url": "url4",
+        },
         {"name": "llama-b1234-linux-x64.zip", "browser_download_url": "url5"},
         {"name": "llama-b1234-macos-arm64.zip", "browser_download_url": "url6"},
         {"name": "some-other-file.tar.gz", "browser_download_url": "url7"},
@@ -354,7 +357,9 @@ class TestDownloadAndExtract:
         with patch("tps_pro.cli.setup_binary.requests.get", return_value=mock_resp):
             with patch("tps_pro.cli.setup_binary.sys") as mock_sys:
                 mock_sys.platform = "win32"
-                result = download_and_extract("https://example.com/release.zip", target_dir)
+                result = download_and_extract(
+                    "https://example.com/release.zip", target_dir
+                )
 
         assert result.name == "llama-server.exe"
         assert result.exists()
@@ -409,8 +414,12 @@ class TestEnsureLlamaServer:
     @pytest.mark.unit
     @patch("tps_pro.cli.setup_binary.download_and_extract")
     @patch("tps_pro.cli.setup_binary.get_latest_release")
-    @patch("tps_pro.cli.setup_binary.detect_gpu_type", return_value=("cuda", "RTX 5080"))
-    def test_downloads_when_missing(self, mock_detect, mock_release, mock_download, tmp_path):
+    @patch(
+        "tps_pro.cli.setup_binary.detect_gpu_type", return_value=("cuda", "RTX 5080")
+    )
+    def test_downloads_when_missing(
+        self, mock_detect, mock_release, mock_download, tmp_path
+    ):
         mock_release.return_value = {
             "tag": "b1234",
             "asset_name": "llama-b1234-win-cuda.zip",
@@ -430,7 +439,9 @@ class TestEnsureLlamaServer:
         mock_download.assert_called_once()
 
     @pytest.mark.unit
-    @patch("tps_pro.cli.setup_binary.detect_gpu_type", return_value=("cuda", "RTX 5080"))
+    @patch(
+        "tps_pro.cli.setup_binary.detect_gpu_type", return_value=("cuda", "RTX 5080")
+    )
     @patch("tps_pro.cli.setup_binary.get_latest_release")
     def test_raises_on_download_failure(self, mock_release, mock_detect, tmp_path):
         mock_release.side_effect = SetupBinaryError("No internet")

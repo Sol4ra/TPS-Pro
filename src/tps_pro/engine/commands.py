@@ -182,9 +182,7 @@ def _add_kv_cache_args(  # noqa: C901, PLR0912
         draft_path = Path(str(engine_config["model_draft"])).resolve()
         if ctx is not None:
             allowed_dir = ctx.model_path.parent.resolve()
-            starts_under = str(draft_path).startswith(
-                str(allowed_dir) + os.sep
-            )
+            starts_under = str(draft_path).startswith(str(allowed_dir) + os.sep)
             if not starts_under and draft_path.parent != allowed_dir:
                 logger.warning(
                     "Rejected model_draft — path %s is not under model directory %s",

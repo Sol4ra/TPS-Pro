@@ -45,6 +45,7 @@ def _make_boot_side_effect(pass_set: set[int]):
 
     Contexts in *pass_set* succeed ("ok"), everything else OOMs.
     """
+
     def _boot(ctx, config):
         ctx_size = config.get("context", 4096)
         status = "ok" if ctx_size in pass_set else "oom"

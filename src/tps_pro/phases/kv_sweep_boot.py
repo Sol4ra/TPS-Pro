@@ -59,7 +59,9 @@ def get_model_max_context(meta: dict) -> int:
 
 
 def _try_boot_at_context(
-    ctx: AppContext, config: dict[str, Any], ctx_size: int,
+    ctx: AppContext,
+    config: dict[str, Any],
+    ctx_size: int,
 ) -> str:
     """Attempt to boot the server at a given context size.
 

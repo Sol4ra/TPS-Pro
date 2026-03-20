@@ -241,9 +241,12 @@ class TestMeasureQuality:
 class TestBuildNiahPrompt:
     def test_prompt_contains_needle(self):
         ctx = _make_ctx()
+
         # Mock tokenize endpoint to return proportional token list
         def _tokenize_side_effect(*args, **kwargs):
-            content = kwargs.get("json", {}).get("content", args[1] if len(args) > 1 else "")
+            content = kwargs.get("json", {}).get(
+                "content", args[1] if len(args) > 1 else ""
+            )
             if isinstance(content, dict):
                 content = content.get("content", "")
             token_count = max(1, len(content) // 3)
@@ -251,7 +254,9 @@ class TestBuildNiahPrompt:
 
         ctx.http.post.side_effect = _tokenize_side_effect
 
-        prompt = build_niah_prompt(ctx, target_tokens=500, needle_fact="The sky is blue.")
+        prompt = build_niah_prompt(
+            ctx, target_tokens=500, needle_fact="The sky is blue."
+        )
         assert "The sky is blue." in prompt
 
     # ===============================================================
@@ -264,7 +269,9 @@ class TestBuildNiahPrompt:
         def _tokenize_side_effect(*args, **kwargs):
             body = kwargs.get("json", {})
             content = body.get("content", "")
-            return _mock_response(200, {"tokens": list(range(max(1, len(content) // 3)))})
+            return _mock_response(
+                200, {"tokens": list(range(max(1, len(content) // 3)))}
+            )
 
         ctx.http.post.side_effect = _tokenize_side_effect
 
@@ -304,7 +311,9 @@ class TestNiahTest:
         def _http_post(url, **kwargs):
             if "/tokenize" in url:
                 content = kwargs.get("json", {}).get("content", "")
-                return _mock_response(200, {"tokens": list(range(max(1, len(content) // 3)))})
+                return _mock_response(
+                    200, {"tokens": list(range(max(1, len(content) // 3)))}
+                )
             # Chat completion: return the expected answer
             return _mock_response(
                 200,
@@ -330,13 +339,17 @@ class TestNiahTest:
     @patch("tps_pro.evals.niah.kill_server")
     @patch("tps_pro.evals.niah.wait_for_server", return_value="ok")
     @patch("tps_pro.evals.niah.start_server", return_value=MagicMock())
-    def test_fail_when_model_returns_wrong_answer(self, mock_start, mock_wait, mock_kill):
+    def test_fail_when_model_returns_wrong_answer(
+        self, mock_start, mock_wait, mock_kill
+    ):
         ctx = _make_ctx()
 
         def _http_post(url, **kwargs):
             if "/tokenize" in url:
                 content = kwargs.get("json", {}).get("content", "")
-                return _mock_response(200, {"tokens": list(range(max(1, len(content) // 3)))})
+                return _mock_response(
+                    200, {"tokens": list(range(max(1, len(content) // 3)))}
+                )
             return _mock_response(200, _chat_response("I have no idea"))
 
         ctx.http.post.side_effect = _http_post
@@ -374,9 +387,7 @@ class TestTokenizeCache:
         cache = TokenizeCache()
 
         # First call hits server
-        ctx.http.post.return_value = _mock_response(
-            200, {"tokens": list(range(100))}
-        )
+        ctx.http.post.return_value = _mock_response(200, {"tokens": list(range(100))})
         count1 = tokenize_count(ctx, "x" * 300, cache)
         assert count1 == 100  # exact from server
         assert cache.get() is not None
@@ -424,15 +435,20 @@ class TestMeasureTruePerplexity:
             call_count += 1
             if "/v1/chat/completions" in url:
                 # Chat endpoint returns too few logprobs
-                return _mock_response(200, {
-                    "choices": [{"logprobs": {"content": []}, "message": {"content": ""}}]
-                })
+                return _mock_response(
+                    200,
+                    {
+                        "choices": [
+                            {"logprobs": {"content": []}, "message": {"content": ""}}
+                        ]
+                    },
+                )
             if "/v1/completions" in url:
                 # Completions endpoint succeeds
                 token_logprobs = [-2.0] * 20
-                return _mock_response(200, {
-                    "choices": [{"logprobs": {"token_logprobs": token_logprobs}}]
-                })
+                return _mock_response(
+                    200, {"choices": [{"logprobs": {"token_logprobs": token_logprobs}}]}
+                )
             return _mock_response(404, {})
 
         ctx.http.post.side_effect = _post_side_effect
@@ -510,9 +526,7 @@ class TestPhaseReasoningEval:
     def test_returns_score_in_range(self):
         ctx = _make_ctx()
         # All correct
-        ctx.http.post.return_value = _mock_response(
-            200, _chat_response("391")
-        )
+        ctx.http.post.return_value = _mock_response(200, _chat_response("391"))
         score = phase_reasoning_eval(ctx, n_tasks=1)
         assert 0 <= score <= 100
 

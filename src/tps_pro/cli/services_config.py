@@ -215,7 +215,8 @@ def get_available_models(ctx: AppContext) -> list[ModelInfo]:
     gguf_files = [
         f
         for f in gguf_files
-        if f.is_file() and not f.is_symlink()
+        if f.is_file()
+        and not f.is_symlink()
         and "mmproj" not in f.name.lower()
         and "reranker" not in f.parent.name.lower()
         and "embedding" not in f.parent.name.lower()

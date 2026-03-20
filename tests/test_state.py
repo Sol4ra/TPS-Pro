@@ -504,7 +504,9 @@ class TestLoadConfig:
     """Test CLI arg parsing, config file loading, and hardware auto-detection."""
 
     @pytest.mark.unit
-    @patch("tps_pro.cli.setup_binary.ensure_llama_server", side_effect=RuntimeError("test"))
+    @patch(
+        "tps_pro.cli.setup_binary.ensure_llama_server", side_effect=RuntimeError("test")
+    )
     @patch("tps_pro.state._detect_numa_nodes", return_value=1)
     @patch("tps_pro.state.detect_model_layers", return_value=None)
     @patch("pathlib.Path.exists", return_value=False)
@@ -612,7 +614,9 @@ class TestLoadConfig:
             assert config["port"] == 7777
 
     @pytest.mark.unit
-    @patch("tps_pro.cli.setup_binary.ensure_llama_server", side_effect=RuntimeError("test"))
+    @patch(
+        "tps_pro.cli.setup_binary.ensure_llama_server", side_effect=RuntimeError("test")
+    )
     @patch("tps_pro.state._detect_numa_nodes", return_value=1)
     @patch("tps_pro.state.detect_model_layers", return_value=None)
     @patch("tps_pro.state.os.cpu_count", return_value=8)

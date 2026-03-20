@@ -28,6 +28,7 @@ _P = "tps_pro.pipeline"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_mock_ctx(
     is_moe=False,
     naked_engine=None,
@@ -91,27 +92,37 @@ def _make_pipeline_config(is_moe=False):
     if is_moe:
         phases.append(
             PhaseConfig(
-                phase="moe_sweep", display_name="MoE Threads",
+                phase="moe_sweep",
+                display_name="MoE Threads",
                 moe_only=True,
             )
         )
-    phases.extend([
-        PhaseConfig(
-            phase="kv_context_sweep", display_name="KV + Context Sweep",
-            kv_types=["f16", "q8_0", "q4_0"],
-        ),
-        PhaseConfig(
-            phase="core_engine", display_name="Core Engine",
-            trials=100,
-            search_params=[
-                "threads", "threads_batch", "batch_size",
-                "ubatch_size", "flash_attn", "poll", "poll_batch",
-            ],
-        ),
-        PhaseConfig(phase="speculation", display_name="Speculation", trials=40),
-        PhaseConfig(phase="workload_sim", display_name="Workload Sim"),
-        PhaseConfig(phase="quality", display_name="Quality/Sampling", trials=60),
-    ])
+    phases.extend(
+        [
+            PhaseConfig(
+                phase="kv_context_sweep",
+                display_name="KV + Context Sweep",
+                kv_types=["f16", "q8_0", "q4_0"],
+            ),
+            PhaseConfig(
+                phase="core_engine",
+                display_name="Core Engine",
+                trials=100,
+                search_params=[
+                    "threads",
+                    "threads_batch",
+                    "batch_size",
+                    "ubatch_size",
+                    "flash_attn",
+                    "poll",
+                    "poll_batch",
+                ],
+            ),
+            PhaseConfig(phase="speculation", display_name="Speculation", trials=40),
+            PhaseConfig(phase="workload_sim", display_name="Workload Sim"),
+            PhaseConfig(phase="quality", display_name="Quality/Sampling", trials=60),
+        ]
+    )
     return PipelineConfig(global_flags={}, phases=phases)
 
 
@@ -132,9 +143,7 @@ def _build_base_patches(ctx_mock, cfg, load_results=None, is_moe=False):
         f"{_P}.phase_gpu_offload": MagicMock(return_value={"best_ngl": 99}),
         f"{_P}.phase_tensor_split": MagicMock(return_value=None),
         f"{_P}.phase_moe_sweep": MagicMock(return_value=None),
-        f"{_P}.phase_kv_context_sweep": MagicMock(
-            return_value={"best_params": {}}
-        ),
+        f"{_P}.phase_kv_context_sweep": MagicMock(return_value={"best_params": {}}),
         f"{_P}.phase_core_engine": MagicMock(return_value={"threads": 8}),
         f"{_P}.phase_speculation": MagicMock(return_value={}),
         f"{_P}.phase_workload_sim": MagicMock(return_value={}),
@@ -179,9 +188,7 @@ class TestMoeSweepToKvSweep:
         patches[f"{_P}.phase_moe_sweep"] = MagicMock(
             return_value={"best_params": moe_params}
         )
-        patches[f"{_P}.phase_kv_context_sweep"] = MagicMock(
-            side_effect=_capture_kv
-        )
+        patches[f"{_P}.phase_kv_context_sweep"] = MagicMock(side_effect=_capture_kv)
 
         _run_with_patches(patches)
 
@@ -219,9 +226,7 @@ class TestKvSweepToCoreEngine:
         patches[f"{_P}.phase_kv_context_sweep"] = MagicMock(
             return_value={"best_params": kv_params}
         )
-        patches[f"{_P}.phase_core_engine"] = MagicMock(
-            side_effect=_capture_core
-        )
+        patches[f"{_P}.phase_core_engine"] = MagicMock(side_effect=_capture_core)
 
         _run_with_patches(patches)
 
@@ -263,9 +268,7 @@ class TestCoreEngineReceivesAllPriorResults:
         patches[f"{_P}.phase_kv_context_sweep"] = MagicMock(
             return_value={"best_params": kv_params}
         )
-        patches[f"{_P}.phase_core_engine"] = MagicMock(
-            side_effect=_capture_core
-        )
+        patches[f"{_P}.phase_core_engine"] = MagicMock(side_effect=_capture_core)
 
         _run_with_patches(patches)
 
@@ -307,9 +310,7 @@ class TestSpeculationReceivesCoreResults:
         patches[f"{_P}.phase_core_engine"] = MagicMock(
             return_value={"best_params": core_params}
         )
-        patches[f"{_P}.phase_speculation"] = MagicMock(
-            side_effect=_capture_spec
-        )
+        patches[f"{_P}.phase_speculation"] = MagicMock(side_effect=_capture_spec)
 
         _run_with_patches(patches)
 
@@ -359,9 +360,7 @@ class TestWorkloadSimReceivesAllResults:
         patches[f"{_P}.phase_speculation"] = MagicMock(
             return_value={"best_params": spec_params}
         )
-        patches[f"{_P}.phase_workload_sim"] = MagicMock(
-            side_effect=_capture_ws
-        )
+        patches[f"{_P}.phase_workload_sim"] = MagicMock(side_effect=_capture_ws)
 
         _run_with_patches(patches)
 
@@ -405,12 +404,8 @@ class TestNakedEnginePreservedOnNone:
         patches[f"{_P}.phase_kv_context_sweep"] = MagicMock(
             side_effect=RuntimeError("boom")
         )
-        patches[f"{_P}.phase_core_engine"] = MagicMock(
-            side_effect=RuntimeError("boom")
-        )
-        patches[f"{_P}.phase_speculation"] = MagicMock(
-            side_effect=_capture_spec
-        )
+        patches[f"{_P}.phase_core_engine"] = MagicMock(side_effect=RuntimeError("boom"))
+        patches[f"{_P}.phase_speculation"] = MagicMock(side_effect=_capture_spec)
 
         _run_with_patches(patches)
 
@@ -438,15 +433,9 @@ class TestNakedEnginePreservedOnNone:
         patches[f"{_P}.phase_kv_context_sweep"] = MagicMock(
             return_value={"best_params": {}}
         )
-        patches[f"{_P}.phase_core_engine"] = MagicMock(
-            return_value={"best_params": {}}
-        )
-        patches[f"{_P}.phase_speculation"] = MagicMock(
-            return_value={"best_params": {}}
-        )
-        patches[f"{_P}.phase_workload_sim"] = MagicMock(
-            side_effect=_capture_ws
-        )
+        patches[f"{_P}.phase_core_engine"] = MagicMock(return_value={"best_params": {}})
+        patches[f"{_P}.phase_speculation"] = MagicMock(return_value={"best_params": {}})
+        patches[f"{_P}.phase_workload_sim"] = MagicMock(side_effect=_capture_ws)
 
         _run_with_patches(patches)
 
@@ -522,13 +511,17 @@ class TestValidatedConfigMergePreservesKeys:
         after_core = _validated_config_merge(
             after_kv, {"threads": 8, "batch_size": 512}, "core"
         )
-        after_spec = _validated_config_merge(
-            after_core, {"spec_type": "ngram"}, "spec"
-        )
+        after_spec = _validated_config_merge(after_core, {"spec_type": "ngram"}, "spec")
 
         expected_keys = {
-            "context", "mlock", "n_gpu_layers", "n_cpu_moe",
-            "cache_type_k", "threads", "batch_size", "spec_type",
+            "context",
+            "mlock",
+            "n_gpu_layers",
+            "n_cpu_moe",
+            "cache_type_k",
+            "threads",
+            "batch_size",
+            "spec_type",
         }
         assert set(after_spec.keys()) == expected_keys
         # context was overridden by KV sweep
@@ -548,11 +541,13 @@ class TestExtractBestParamsVariants:
     @pytest.mark.unit
     def test_phase_return_dict_shape(self):
         """Standard PhaseReturnDict with best_params key."""
-        result = _extract_best_params({
-            "best_params": {"threads": 8, "batch_size": 512},
-            "best_score": 42.0,
-            "study_name": "core_engine",
-        })
+        result = _extract_best_params(
+            {
+                "best_params": {"threads": 8, "batch_size": 512},
+                "best_score": 42.0,
+                "study_name": "core_engine",
+            }
+        )
         assert result == {"threads": 8, "batch_size": 512}
 
     @pytest.mark.unit
@@ -693,8 +688,9 @@ class TestFullPipelineParamAccumulation:
     def test_dense_model_skips_moe_but_flows_rest(self):
         """Dense model (is_moe=False) skips MoE sweep but rest flows correctly."""
         naked = {"context": 4096, "mlock": True, "n_gpu_layers": 50}
-        ctx_mock = _make_mock_ctx(is_moe=False, naked_engine=dict(naked),
-                                   default_gpu_layers=50)
+        ctx_mock = _make_mock_ctx(
+            is_moe=False, naked_engine=dict(naked), default_gpu_layers=50
+        )
         cfg = _make_config()
 
         kv_params = {"cache_type_k": "f16"}

@@ -91,9 +91,7 @@ def _score_lite_mode(
         if prompt_tps > 0
         else 0.0
     )
-    ttft_factor = (
-        min(TTFT_BASELINE_MS / ttft, NORM_CAP_MULTIPLIER) if ttft > 0 else 0.0
-    )
+    ttft_factor = min(TTFT_BASELINE_MS / ttft, NORM_CAP_MULTIPLIER) if ttft > 0 else 0.0
 
     multiplier = min(
         LITE_BASE_MULTIPLIER
@@ -211,9 +209,7 @@ def compute_pareto_objectives(
     tps = getattr(perf, "tps", 0.0)
     vram_mb = getattr(perf, "vram_used_mb", None)
     # Penalize unknown VRAM with sentinel
-    neg_vram = (
-        -vram_mb if vram_mb is not None else VRAM_FAILURE_PENALTY
-    )
+    neg_vram = -vram_mb if vram_mb is not None else VRAM_FAILURE_PENALTY
     return ParetoObjectives(tps=tps, neg_vram=neg_vram, quality_factor=quality_factor)
 
 

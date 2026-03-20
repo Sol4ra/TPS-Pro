@@ -47,10 +47,12 @@ class PynvmlModule(Protocol):
     def nvmlDeviceGetMemoryInfo(self, handle: Any) -> Any: ...  # noqa: N802
     def nvmlDeviceGetTemperature(self, handle: Any, sensor_type: int) -> int: ...  # noqa: N802
     def nvmlDeviceGetComputeRunningProcesses(  # noqa: N802
-        self, handle: Any,
+        self,
+        handle: Any,
     ) -> list[NVMLProcessInfo]: ...
     def nvmlDeviceGetGraphicsRunningProcesses(  # noqa: N802
-        self, handle: Any,
+        self,
+        handle: Any,
     ) -> list[NVMLProcessInfo]: ...
     def nvmlSystemGetProcessName(self, pid: int) -> bytes: ...  # noqa: N802
 

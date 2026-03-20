@@ -69,7 +69,8 @@ def bench_score(p: object, baseline: object | None = None) -> float:
 
 
 def get_moe_config(
-    ctx: AppContext, p1a_results: dict[str, Any] | None = None,
+    ctx: AppContext,
+    p1a_results: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Extract MoE config dict from MoE phase results, with defaults."""
     if not ctx.is_moe:
@@ -126,5 +127,3 @@ def build_phase_config(
     with _phase_config_cache_lock:
         _phase_config_cache[cache_key] = merged_params
     return {**ctx.naked_engine, **merged_params}
-
-

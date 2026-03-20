@@ -22,6 +22,7 @@ def __getattr__(name: str):
     # Bench trial execution and OOM sentinel
     if name in ("BenchOOMError", "run_bench_trial"):
         from .bench import BenchOOMError, run_bench_trial
+
         _exports = {
             "BenchOOMError": BenchOOMError,
             "run_bench_trial": run_bench_trial,
@@ -31,20 +32,27 @@ def __getattr__(name: str):
     # Server log/output parsing helpers
     if name == "reset_load_time_debug":
         from .parsing import reset_load_time_debug
+
         return reset_load_time_debug
 
     # Server lifecycle: start, wait, kill, warmup, jinja recovery
     if name in (
-        "boot_server_with_jinja_recovery", "is_server_running", "kill_server",
+        "boot_server_with_jinja_recovery",
+        "is_server_running",
+        "kill_server",
         "server_start_failed",
-        "start_server", "wait_for_server", "warmup_server",
+        "start_server",
+        "wait_for_server",
+        "warmup_server",
     ):
         from . import server
+
         return getattr(server, name)
 
     # Typed wrapper around subprocess.Popen for server processes
     if name == "ServerProcess":
         from ..result_types import ServerProcess
+
         return ServerProcess
 
     # Deprecated: import BaselineFailure directly from tps_pro.errors instead.
@@ -53,14 +61,19 @@ def __getattr__(name: str):
     # phases/trial_helpers.py).
     if name == "BaselineFailure":
         from ..errors import BaselineFailure
+
         return BaselineFailure
 
     # Shared utilities: logging tee, phase timer, dry-run guard, tensor math, JSON I/O
     if name in (
-        "LogTee", "PhaseTimer", "check_dry_run",
-        "generate_tensor_splits", "read_json_safe",
+        "LogTee",
+        "PhaseTimer",
+        "check_dry_run",
+        "generate_tensor_splits",
+        "read_json_safe",
     ):
         from . import util
+
         return getattr(util, name)
 
     raise AttributeError(f"module 'tps_pro.engine' has no attribute {name!r}")

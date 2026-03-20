@@ -635,9 +635,7 @@ class TestIsServerRunning:
         mock_response.status_code = 200
         mock_get.return_value = mock_response
         assert is_server_running(mock_ctx) is True
-        mock_get.assert_called_once_with(
-            "http://127.0.0.1:8090/health", timeout=0.15
-        )
+        mock_get.assert_called_once_with("http://127.0.0.1:8090/health", timeout=0.15)
 
     @patch("tps_pro.engine.server.requests.get")
     def test_returns_false_when_no_server(self, mock_get):
@@ -651,7 +649,9 @@ class TestIsServerRunning:
         result = is_server_running(mock_ctx)
         elapsed_ms = (time.monotonic() - t0) * 1000
         assert result is False
-        assert elapsed_ms < 200, f"is_server_running took {elapsed_ms:.0f}ms, expected <200ms"
+        assert elapsed_ms < 200, (
+            f"is_server_running took {elapsed_ms:.0f}ms, expected <200ms"
+        )
 
     @patch("tps_pro.engine.server.requests.get")
     def test_returns_false_on_non_200(self, mock_get):
@@ -701,5 +701,3 @@ class TestKillServerAlreadyDead:
             kill_server(mock_ctx, wait=True)
         mock_kill_tree.assert_called_once_with(sp)
         assert mock_ctx.active_server_proc is None
-
-

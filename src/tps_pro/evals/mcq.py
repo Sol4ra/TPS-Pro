@@ -120,9 +120,7 @@ def measure_quality(
     max_tokens = oai_params.pop("max_tokens", 1024)
 
     if HAS_AIOHTTP:
-        return _measure_quality_async(
-            ctx, tasks, max_tokens, oai_params
-        )
+        return _measure_quality_async(ctx, tasks, max_tokens, oai_params)
 
     # Sequential path — pass target_to_beat for early short-circuit
     return _measure_quality_sequential(

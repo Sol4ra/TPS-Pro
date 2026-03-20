@@ -28,6 +28,7 @@ def _show_error(msg: str) -> None:
     print(f"\n  [!] {msg}")
     _pause()
 
+
 # ── Constants ─────────────────────────────────────────────────────
 
 _MAX_DISPLAY_PARAMS = 3
@@ -47,8 +48,7 @@ def _format_phase_line(idx: int, phase: PhaseConfig) -> str:
     else:
         if phase.range:
             details.append(
-                f"range: {phase.range[0]}-{phase.range[1]},"
-                f" step: {phase.step}"
+                f"range: {phase.range[0]}-{phase.range[1]}, step: {phase.step}"
             )
         if phase.test_flags:
             details.append(f"flags: {', '.join(phase.test_flags)}")
@@ -188,7 +188,8 @@ def _do_toggle_phase(config: PipelineConfig) -> PipelineConfig:
 
     new_phases = deepcopy(config.phases)
     new_phases[idx] = dataclasses.replace(
-        new_phases[idx], enabled=not new_phases[idx].enabled,
+        new_phases[idx],
+        enabled=not new_phases[idx].enabled,
     )
     state = "enabled" if new_phases[idx].enabled else "disabled"
     new_config = PipelineConfig(
@@ -237,10 +238,7 @@ def _do_move_phase(config: PipelineConfig) -> PipelineConfig:
         phases=new_phases,
     )
     direction_label = "up" if direction in ("u", "up") else "down"
-    print(
-        f"\n  Moved {config.phases[idx].display_name}"
-        f" {direction_label}."
-    )
+    print(f"\n  Moved {config.phases[idx].display_name} {direction_label}.")
     _pause()
     return new_config
 
@@ -358,16 +356,8 @@ def _do_edit_phase(config: PipelineConfig) -> PipelineConfig:
     phase = config.phases[idx]
     print(f"\n  Editing: {phase.display_name}")
     print(f"    Trials:        {phase.trials if phase.trials is not None else '(n/a)'}")
-    sp = (
-        ", ".join(phase.search_params)
-        if phase.search_params
-        else "(none)"
-    )
-    tf = (
-        ", ".join(phase.test_flags)
-        if phase.test_flags
-        else "(none)"
-    )
+    sp = ", ".join(phase.search_params) if phase.search_params else "(none)"
+    tf = ", ".join(phase.test_flags) if phase.test_flags else "(none)"
     print(f"    Search params: {sp}")
     print(f"    Test flags:    {tf}")
     print(f"    Locked params: {phase.lock if phase.lock else '(none)'}")
@@ -440,6 +430,7 @@ def config_editor_menu() -> None:
     while True:
         # Clear screen using menu.py's pattern
         from .menu import clear_screen
+
         clear_screen()
 
         _print_config_view(config)

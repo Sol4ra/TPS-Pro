@@ -651,7 +651,6 @@ config: dict[str, Any] = {}
 _initialized = False
 
 
-
 def replace_config(new_config: dict[str, Any]) -> None:
     """Replace the contents of the module-level ``config`` dict.
 

@@ -269,5 +269,3 @@ def test_get_val_default_is_zero():
     """_get_val default is 0 when not specified."""
     assert _get_val({}, "tps") == 0
     assert _get_val(SimpleNamespace(), "tps") == 0
-
-

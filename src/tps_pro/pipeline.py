@@ -212,7 +212,9 @@ def _optimize_single_model(
     except _BUG_ERRORS as e:
         logger.warning(
             "Likely code bug optimizing %s: %s: %s",
-            model_name, type(e).__name__, e,
+            model_name,
+            type(e).__name__,
+            e,
         )
         logger.debug("Bug error details:", exc_info=True)
         return {"model": model_name, "status": "error", "error": str(e)}
@@ -249,7 +251,8 @@ def batch_optimize(  # noqa: C901, PLR0915
     gguf_files = [
         f
         for f in gguf_files
-        if f.is_file() and not f.is_symlink()
+        if f.is_file()
+        and not f.is_symlink()
         and "mmproj" not in f.name.lower()
         and "embedding" not in f.parent.name.lower()
         and "reranker" not in f.parent.name.lower()
@@ -567,10 +570,18 @@ def _handle_ab_toggles(
     pipeline_config: PipelineConfig,
 ) -> _PhaseHandlerReturn:
     test_flags = pipeline_config.strip_globals_from_flags(
-        pc.test_flags or [
-            "op_offload", "prio", "prio_batch",
-            "no_mmap", "mlock", "repack", "swa_full",
-            "numa", "cpu_strict", "cpu_strict_batch",
+        pc.test_flags
+        or [
+            "op_offload",
+            "prio",
+            "prio_batch",
+            "no_mmap",
+            "mlock",
+            "repack",
+            "swa_full",
+            "numa",
+            "cpu_strict",
+            "cpu_strict_batch",
         ]
     )
     stripped_pc = dataclasses.replace(pc, test_flags=test_flags)
@@ -834,7 +845,9 @@ def run_full_pipeline(  # noqa: C901, PLR0912, PLR0915
         except _BUG_ERRORS as e:
             logger.warning(
                 "%s failed (likely code bug — %s): %s",
-                name, type(e).__name__, e,
+                name,
+                type(e).__name__,
+                e,
             )
             logger.debug("Bug error details:", exc_info=True)
             kill_server(ctx)
@@ -896,14 +909,12 @@ def run_full_pipeline(  # noqa: C901, PLR0912, PLR0915
 
         result = _run_phase(
             name,
-            lambda pc=phase_cfg, bc=best_config: (
-                _dispatch_phase(pc, ctx, bc, pipeline_cfg)
+            lambda pc=phase_cfg, bc=best_config: _dispatch_phase(
+                pc, ctx, bc, pipeline_cfg
             ),
         )
 
-        best_config = _merge_phase_result(
-            best_config, result, phase_cfg.phase, ctx
-        )
+        best_config = _merge_phase_result(best_config, result, phase_cfg.phase, ctx)
 
     pipeline_timer.end_phase("pipeline_total")
 

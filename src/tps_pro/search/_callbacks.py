@@ -117,7 +117,6 @@ class ProgressBarUpdateCallback:
             pbar_state.current.count += 1
 
 
-
 class GPStoppingCallback:
     """Stops optimization when the GP's max EI drops below threshold.
 

@@ -106,5 +106,3 @@ def _retest_neighbors(
     )
     for val in retests:
         test_fn(val, force_3runs=True)
-
-

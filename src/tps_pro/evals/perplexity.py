@@ -179,6 +179,4 @@ def ppl_quality_factor(baseline_ppl: float, trial_ppl: float) -> float:
         return 0.1  # measurement failed = assume bad
 
     degradation = (trial_ppl - baseline_ppl) / baseline_ppl  # fraction increase
-    return quality_factor_curve(
-        degradation, PPL_DEGRADATION_WARN, PPL_DEGRADATION_FAIL
-    )
+    return quality_factor_curve(degradation, PPL_DEGRADATION_WARN, PPL_DEGRADATION_FAIL)

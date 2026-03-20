@@ -54,7 +54,9 @@ class TestClampFinite:
 
     def test_inf_returns_cap(self):
         """Positive infinity is clamped to cap (it is finite=False)."""
-        assert _clamp_finite(float("inf"), 0.0, 100.0) == 0.0  # not finite -> fallback/floor
+        assert (
+            _clamp_finite(float("inf"), 0.0, 100.0) == 0.0
+        )  # not finite -> fallback/floor
 
     def test_neg_inf_returns_floor(self):
         """Negative infinity returns floor (not finite)."""
@@ -80,7 +82,9 @@ class TestClampFinite:
 
 def _make_sample(tps=50.0, ttft=100.0, prompt_tps=200.0, total_ms=500.0, **kw):
     """Build a PerfSample with defaults."""
-    return PerfSample(tps=tps, ttft=ttft, prompt_tps=prompt_tps, total_ms=total_ms, **kw)
+    return PerfSample(
+        tps=tps, ttft=ttft, prompt_tps=prompt_tps, total_ms=total_ms, **kw
+    )
 
 
 @pytest.mark.unit
@@ -203,7 +207,9 @@ class TestExtractParetoFront:
         """RuntimeError from study.best_trials returns empty list."""
         study = MagicMock()
         study.best_trials = property(lambda self: (_ for _ in ()).throw(RuntimeError))
-        type(study).best_trials = property(lambda self: (_ for _ in ()).throw(RuntimeError("no")))
+        type(study).best_trials = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("no"))
+        )
         # Use a simpler approach: make best_trials raise
         mock_study = MagicMock()
         type(mock_study).best_trials = property(

@@ -245,9 +245,7 @@ def test_aggregate_single_returns_itself():
 def test_aggregate_multiple_returns_median_by_score():
     """Three samples sorted by score; median (middle) is returned."""
     low = _s(tps=10, prompt_tps=100, ttft=1000, total_ms=2000)
-    mid = _s(
-        tps=50, prompt_tps=SCORE_PP_BASELINE, ttft=TTFT_BASELINE_MS, total_ms=1000
-    )
+    mid = _s(tps=50, prompt_tps=SCORE_PP_BASELINE, ttft=TTFT_BASELINE_MS, total_ms=1000)
     high = _s(
         tps=90,
         prompt_tps=SCORE_PP_BASELINE * 2,
@@ -266,9 +264,7 @@ def test_aggregate_even_number_returns_lower_median():
     """With 4 samples, index 2 (0-indexed) is returned = 3rd element."""
     s1 = _s(tps=10, prompt_tps=100, ttft=1000, total_ms=2000)
     s2 = _s(tps=30, prompt_tps=200, ttft=700, total_ms=1500)
-    s3 = _s(
-        tps=50, prompt_tps=SCORE_PP_BASELINE, ttft=TTFT_BASELINE_MS, total_ms=1000
-    )
+    s3 = _s(tps=50, prompt_tps=SCORE_PP_BASELINE, ttft=TTFT_BASELINE_MS, total_ms=1000)
     s4 = _s(tps=70, prompt_tps=400, ttft=300, total_ms=700)
     result = _aggregate_samples([s4, s1, s3, s2])
     # sorted by score: s1, s2, s3, s4 -> index 2 = s3

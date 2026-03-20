@@ -223,7 +223,9 @@ _DEFAULT_WHITELIST: frozenset[str] = frozenset(
 
 
 def _get_gpu_processes(
-    pynvml_mod: PynvmlModule, handle: object, gpu_idx: int,
+    pynvml_mod: PynvmlModule,
+    handle: object,
+    gpu_idx: int,
 ) -> list:
     """Collect compute + graphics processes for one GPU."""
     procs: list = []
@@ -241,9 +243,7 @@ def _get_gpu_processes(
 def _resolve_process_name(pynvml_mod: PynvmlModule, pid: int) -> str | None:
     """Resolve a PID to a lowercase basename, or None if unresolvable."""
     try:
-        raw = pynvml_mod.nvmlSystemGetProcessName(pid).decode(
-            "utf-8", errors="replace"
-        )
+        raw = pynvml_mod.nvmlSystemGetProcessName(pid).decode("utf-8", errors="replace")
         name = os.path.basename(raw).lower()
         if name:
             return name
@@ -350,8 +350,7 @@ def kill_competing_processes(
     # If a confirmation callback is provided, ask before killing.
     if confirm_callback is not None:
         descriptions = [
-            f"{name} (PID {pid}) — {gpu_mb} MB GPU"
-            for pid, name, gpu_mb in candidates
+            f"{name} (PID {pid}) — {gpu_mb} MB GPU" for pid, name, gpu_mb in candidates
         ]
         if not confirm_callback(descriptions):
             logger.info("User declined to kill competing processes")

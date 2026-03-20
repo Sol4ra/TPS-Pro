@@ -95,7 +95,10 @@ def phase_kv_context_sweep(
 
     try:
         return _run_kv_context_sweep(
-            ctx, effective_config, kv_types_override, scoring_weights,
+            ctx,
+            effective_config,
+            kv_types_override,
+            scoring_weights,
         )
     finally:
         kill_server(ctx)
@@ -118,9 +121,7 @@ def _run_kv_context_sweep(
     all_measurements: list[dict] = []
 
     effective_kv_types = (
-        kv_types_override
-        if kv_types_override is not None
-        else KV_TYPES
+        kv_types_override if kv_types_override is not None else KV_TYPES
     )
 
     meta = get_model_metadata(ctx)
@@ -174,7 +175,8 @@ def _run_kv_context_sweep(
         else None
     )
     best_score, best_kv, best_ctx, best_measurement = score_measurements(
-        all_measurements, scoring_weights=weights_tuple,
+        all_measurements,
+        scoring_weights=weights_tuple,
     )
 
     if best_kv is None or best_ctx is None:
@@ -192,9 +194,9 @@ def _run_kv_context_sweep(
 
     baseline_m = next(
         (
-            m for m in all_measurements
-            if m["kv_type"] == "f16"
-            and m["context"] == _BASELINE_CONTEXT
+            m
+            for m in all_measurements
+            if m["kv_type"] == "f16" and m["context"] == _BASELINE_CONTEXT
         ),
         None,
     )

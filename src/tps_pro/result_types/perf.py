@@ -23,7 +23,6 @@ class PerfSample(_DictAccessMixin):
     vram_total_mb: float | None = None
 
 
-
 @dataclass(frozen=True)
 class PerfResult(_DictAccessMixin):
     """Aggregated performance result from measure_perf_adaptive.
@@ -58,7 +57,6 @@ class PerfResult(_DictAccessMixin):
     load_time_ms: float | None = None
 
 
-
 @dataclass(frozen=True)
 class ConcurrentLoadResult(_DictAccessMixin):
     """Aggregate metrics from measure_concurrent_load."""
@@ -72,7 +70,6 @@ class ConcurrentLoadResult(_DictAccessMixin):
     concurrent_users: int
 
 
-
 @dataclass(frozen=True)
 class TokenUncertaintyResult(_DictAccessMixin):
     """Token-level uncertainty measurement from measure_token_uncertainty."""
@@ -80,7 +77,6 @@ class TokenUncertaintyResult(_DictAccessMixin):
     uncertain_count: int
     tail_avg: float
     total_tokens: int
-
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +118,6 @@ class ParetoObjectives(_DictAccessMixin):
         return len(self._as_tuple)
 
 
-
 # ---------------------------------------------------------------------------
 # llama-bench result (engine/bench.py)
 # ---------------------------------------------------------------------------
@@ -145,7 +140,6 @@ class BenchResult(_DictAccessMixin):
     total_ms: float
 
 
-
 # ---------------------------------------------------------------------------
 # Concurrent single-user result (inner result from _single_request)
 # ---------------------------------------------------------------------------
@@ -162,4 +156,3 @@ class ConcurrentUserResult(_DictAccessMixin):
     prompt_tps: float = 0.0
     wall_time: float = 0.0
     error: str | None = None
-

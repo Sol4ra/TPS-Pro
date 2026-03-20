@@ -231,9 +231,7 @@ class TestRunStudyWithCallbacks:
     @patch("tps_pro.phases.trial_helpers.close_phase_pbar")
     @patch("tps_pro.phases.trial_helpers.create_phase_pbar")
     @patch("tps_pro.phases.trial_helpers.ProgressBarUpdateCallback")
-    def test_creates_pbar_and_calls_optimize(
-        self, mock_tqdm, mock_create, mock_close
-    ):
+    def test_creates_pbar_and_calls_optimize(self, mock_tqdm, mock_create, mock_close):
 
         study = MagicMock()
         objective = MagicMock()

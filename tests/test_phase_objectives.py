@@ -204,7 +204,14 @@ class TestLayer1AbSweep:
         )
 
         # Should have all standard Layer 1 flags
-        expected_keys = {"no_mmap", "mlock", "op_offload", "repack", "prio", "prio_batch"}
+        expected_keys = {
+            "no_mmap",
+            "mlock",
+            "op_offload",
+            "repack",
+            "prio",
+            "prio_batch",
+        }
         assert expected_keys.issubset(set(winners.keys()))
 
 
@@ -233,7 +240,9 @@ class TestLayer2Objective:
     @patch("tps_pro.phases.core_engine.measure_perf_once", return_value=None)
     @patch("tps_pro.phases.core_engine.boot_server_with_jinja_recovery")
     @patch("tps_pro.phases.core_engine.kill_server")
-    @patch("tps_pro.phases.core_engine.check_and_mark_duplicate_trial", return_value=None)
+    @patch(
+        "tps_pro.phases.core_engine.check_and_mark_duplicate_trial", return_value=None
+    )
     @patch("tps_pro.phases.core_engine.thermal_gate")
     def test_returns_score_for_valid_trial(
         self,
@@ -273,7 +282,9 @@ class TestLayer2Objective:
     @patch("tps_pro.phases.core_engine.server_start_failed")
     @patch("tps_pro.phases.core_engine.boot_server_with_jinja_recovery")
     @patch("tps_pro.phases.core_engine.kill_server")
-    @patch("tps_pro.phases.core_engine.check_and_mark_duplicate_trial", return_value=None)
+    @patch(
+        "tps_pro.phases.core_engine.check_and_mark_duplicate_trial", return_value=None
+    )
     @patch("tps_pro.phases.core_engine.thermal_gate")
     def test_handles_server_boot_failure(
         self, _thermal, _dup, _kill, mock_boot, mock_failed, make_ctx
@@ -298,7 +309,9 @@ class TestLayer2Objective:
     @patch("tps_pro.phases.core_engine.measure_perf_once", return_value=None)
     @patch("tps_pro.phases.core_engine.boot_server_with_jinja_recovery")
     @patch("tps_pro.phases.core_engine.kill_server")
-    @patch("tps_pro.phases.core_engine.check_and_mark_duplicate_trial", return_value=None)
+    @patch(
+        "tps_pro.phases.core_engine.check_and_mark_duplicate_trial", return_value=None
+    )
     @patch("tps_pro.phases.core_engine.thermal_gate")
     def test_locks_n_cpu_moe_when_moe_sweep_already_ran(
         self,

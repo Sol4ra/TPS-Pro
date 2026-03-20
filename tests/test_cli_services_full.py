@@ -106,7 +106,9 @@ class TestGetSystemInfo:
     @patch("tps_pro.cli.services_config.classify_model", return_value=("large", 14.0))
     @patch("tps_pro.cli.services_config.detect_gpus", return_value=[])
     @patch("tps_pro.engine.is_server_running", return_value=False)
-    def test_moe_arch_info(self, mock_running, mock_gpus, mock_classify, mock_get_config):
+    def test_moe_arch_info(
+        self, mock_running, mock_gpus, mock_classify, mock_get_config
+    ):
         from tps_pro.cli.services_config import get_system_info
 
         mock_get_config.side_effect = lambda key, default=None: {
@@ -183,8 +185,13 @@ class TestGetToggleStates:
         states = get_toggle_states(ctx, {})
 
         expected_keys = {
-            "pareto", "debug", "no_jinja", "no_bench",
-            "fail_fast", "skip_quality", "interactive",
+            "pareto",
+            "debug",
+            "no_jinja",
+            "no_bench",
+            "fail_fast",
+            "skip_quality",
+            "interactive",
         }
         assert set(states.keys()) == expected_keys
         assert all(isinstance(v, bool) for v in states.values())
@@ -315,7 +322,9 @@ class TestDetectArchitecture:
         assert result is not None
         assert result["type"] == "dense"
 
-    @patch("tps_pro.models.detect_gguf_architecture", side_effect=ImportError("no module"))
+    @patch(
+        "tps_pro.models.detect_gguf_architecture", side_effect=ImportError("no module")
+    )
     def test_returns_none_on_import_error(self, mock_detect):
         from tps_pro.cli.services_config import detect_architecture
 
@@ -392,7 +401,9 @@ class TestGetPipelineProgress:
         from tps_pro.cli.services_pipeline import get_pipeline_progress
 
         # First phase has results, rest don't
-        mock_load.side_effect = lambda ctx, key: {"best_tps": 42.0} if key == "gpu" else None
+        mock_load.side_effect = lambda ctx, key: (
+            {"best_tps": 42.0} if key == "gpu" else None
+        )
         mock_optuna = MagicMock()
         mock_optuna.load_study.side_effect = KeyError("no study")
 
@@ -412,9 +423,15 @@ class TestFindResumePoint:
         from tps_pro.cli.services_pipeline import PhaseProgress, find_resume_point
 
         progress = [
-            PhaseProgress(name="gpu", display_name="GPU", status="done", completed_trials=10),
-            PhaseProgress(name="core", display_name="Core", status="partial", completed_trials=5),
-            PhaseProgress(name="kv", display_name="KV", status="pending", completed_trials=0),
+            PhaseProgress(
+                name="gpu", display_name="GPU", status="done", completed_trials=10
+            ),
+            PhaseProgress(
+                name="core", display_name="Core", status="partial", completed_trials=5
+            ),
+            PhaseProgress(
+                name="kv", display_name="KV", status="pending", completed_trials=0
+            ),
         ]
         assert find_resume_point(progress) == 1
 
@@ -422,8 +439,12 @@ class TestFindResumePoint:
         from tps_pro.cli.services_pipeline import PhaseProgress, find_resume_point
 
         progress = [
-            PhaseProgress(name="gpu", display_name="GPU", status="done", completed_trials=10),
-            PhaseProgress(name="core", display_name="Core", status="done", completed_trials=20),
+            PhaseProgress(
+                name="gpu", display_name="GPU", status="done", completed_trials=10
+            ),
+            PhaseProgress(
+                name="core", display_name="Core", status="done", completed_trials=20
+            ),
         ]
         assert find_resume_point(progress) is None
 
@@ -431,7 +452,9 @@ class TestFindResumePoint:
         from tps_pro.cli.services_pipeline import PhaseProgress, find_resume_point
 
         progress = [
-            PhaseProgress(name="gpu", display_name="GPU", status="pending", completed_trials=0),
+            PhaseProgress(
+                name="gpu", display_name="GPU", status="pending", completed_trials=0
+            ),
         ]
         assert find_resume_point(progress) == 0
 
@@ -482,12 +505,14 @@ class TestResetDatabase:
 
         mock_optuna = MagicMock()
         mock_optuna.storages.RDBStorage.side_effect = OSError("locked")
-        with patch.dict("sys.modules", {"optuna": mock_optuna}), \
-             patch("tps_pro.cli.services_pipeline.gc"), \
-             patch(
-                 "tps_pro.cli.services_pipeline._safe_delete_file",
-                 return_value=False,
-             ):
+        with (
+            patch.dict("sys.modules", {"optuna": mock_optuna}),
+            patch("tps_pro.cli.services_pipeline.gc"),
+            patch(
+                "tps_pro.cli.services_pipeline._safe_delete_file",
+                return_value=False,
+            ),
+        ):
             with pytest.raises(DatabaseResetError, match="Could not delete DB"):
                 reset_database(ctx)
 
@@ -528,6 +553,7 @@ class TestGetModelResults:
         def patched_get_model_results(ctx):
             # Inline the function logic with our tmp_path as base_results_dir
             from datetime import datetime
+
             base_results_dir = tmp_path
             if not base_results_dir.exists():
                 return []
@@ -547,13 +573,15 @@ class TestGetModelResults:
                             best_tps = bt
                 newest = max(phase_files, key=lambda f: f.stat().st_mtime)
                 mtime = datetime.fromtimestamp(newest.stat().st_mtime).isoformat()
-                results.append({
-                    "name": d.name,
-                    "path": str(d),
-                    "phase_count": len(phase_files),
-                    "best_tps": best_tps,
-                    "last_modified": mtime,
-                })
+                results.append(
+                    {
+                        "name": d.name,
+                        "path": str(d),
+                        "phase_count": len(phase_files),
+                        "best_tps": best_tps,
+                        "last_modified": mtime,
+                    }
+                )
             return results
 
         ctx = _make_ctx()
@@ -675,11 +703,13 @@ class TestGenerateHtmlReport:
     def test_produces_valid_html(self, tmp_path):
         # Set up results directory with at least one phase result
         (tmp_path / "core_engine_results.json").write_text(
-            json.dumps({
-                "best_tps": 42.5,
-                "all_trials": [{"tps": 42.5}],
-                "duration_minutes": 1.5,
-            })
+            json.dumps(
+                {
+                    "best_tps": 42.5,
+                    "all_trials": [{"tps": 42.5}],
+                    "duration_minutes": 1.5,
+                }
+            )
         )
 
         ctx = _make_ctx(
@@ -707,11 +737,13 @@ class TestGenerateHtmlReport:
 
         malicious_name = '<script>alert("xss")</script>'
         (tmp_path / "core_engine_results.json").write_text(
-            json.dumps({
-                "best_tps": 42.5,
-                "all_trials": [],
-                "duration_minutes": 1.0,
-            })
+            json.dumps(
+                {
+                    "best_tps": 42.5,
+                    "all_trials": [],
+                    "duration_minutes": 1.0,
+                }
+            )
         )
 
         ctx = _make_ctx(results_dir=tmp_path)
@@ -751,16 +783,24 @@ class TestNeedsSetup:
         model_file = tmp_path / "model.gguf"
         model_file.write_bytes(b"\x00" * 100)
         fake_cfg = {"server": "", "model": str(model_file)}
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
+
             assert needs_setup() is True
 
     def test_returns_true_when_model_path_missing(self, tmp_path):
         server_file = tmp_path / "llama-server"
         server_file.write_bytes(b"\x00" * 100)
         fake_cfg = {"server": str(server_file), "model": ""}
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
+
             assert needs_setup() is True
 
     def test_returns_false_when_both_exist(self, tmp_path):
@@ -769,14 +809,22 @@ class TestNeedsSetup:
         model_file = tmp_path / "model.gguf"
         model_file.write_bytes(b"\x00" * 100)
         fake_cfg = {"server": str(server_file), "model": str(model_file)}
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
+
             assert needs_setup() is False
 
     def test_returns_true_when_server_file_doesnt_exist(self):
         fake_cfg = {"server": "/nonexistent/server", "model": "/nonexistent/model"}
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
+
             assert needs_setup() is True
 
 

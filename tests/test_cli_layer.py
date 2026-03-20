@@ -107,7 +107,10 @@ class TestNeedsSetup:
         model_file = tmp_path / "model.gguf"
         model_file.write_bytes(b"\x00" * 10)
         fake_cfg = {"server": "", "model": str(model_file)}
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
 
             assert needs_setup() is True
@@ -117,7 +120,10 @@ class TestNeedsSetup:
         server_file = tmp_path / "llama-server"
         server_file.write_bytes(b"\x00" * 10)
         fake_cfg = {"server": str(server_file), "model": ""}
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
 
             assert needs_setup() is True
@@ -129,7 +135,10 @@ class TestNeedsSetup:
         model_file = tmp_path / "model.gguf"
         model_file.write_bytes(b"\x00" * 10)
         fake_cfg = {"server": str(server_file), "model": str(model_file)}
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
 
             assert needs_setup() is False
@@ -140,7 +149,10 @@ class TestNeedsSetup:
             "server": "/nonexistent/llama-server",
             "model": "/nonexistent/model.gguf",
         }
-        with patch("tps_pro.cli.wizard.get_config", side_effect=lambda k, d="": fake_cfg.get(k, d)):
+        with patch(
+            "tps_pro.cli.wizard.get_config",
+            side_effect=lambda k, d="": fake_cfg.get(k, d),
+        ):
             from tps_pro.cli.wizard import needs_setup
 
             assert needs_setup() is True
@@ -209,8 +221,14 @@ class TestViewResults:
 class TestGenerateOptimizedCommand:
     """Tests for services_command.generate_optimized_command."""
 
-    @patch("tps_pro.cli.services_command._format_command", return_value="/usr/bin/server -m model.gguf")
-    @patch("tps_pro.cli.services_command._build_command_parts", return_value=["/usr/bin/server"])
+    @patch(
+        "tps_pro.cli.services_command._format_command",
+        return_value="/usr/bin/server -m model.gguf",
+    )
+    @patch(
+        "tps_pro.cli.services_command._build_command_parts",
+        return_value=["/usr/bin/server"],
+    )
     @patch(
         "tps_pro.cli.services_command._merge_phase_results",
         return_value={"n_gpu_layers": 99},
@@ -304,9 +322,7 @@ class TestGenerateHtmlReport:
 
     @patch("tps_pro.cli.report.ctx")
     @patch("tps_pro.cli.report._load_report_phases")
-    def test_returns_html_with_escaped_model_name(
-        self, mock_load, mock_ctx, tmp_path
-    ):
+    def test_returns_html_with_escaped_model_name(self, mock_load, mock_ctx, tmp_path):
         """generate_html_report returns path and escapes model name."""
         from tps_pro.cli.report import generate_html_report
 
@@ -345,5 +361,3 @@ class TestGenerateHtmlReport:
 
         result = generate_html_report(results_dir=tmp_path, gpus=[])
         assert result is None
-
-

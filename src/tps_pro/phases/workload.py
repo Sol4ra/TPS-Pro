@@ -99,8 +99,7 @@ def phase_workload_sim(  # noqa: C901, PLR0912, PLR0915
                     {
                         "role": "user",
                         "content": (
-                            "Explain the difference between"
-                            " a mutex and a semaphore."
+                            "Explain the difference between a mutex and a semaphore."
                         ),
                     },
                 ],

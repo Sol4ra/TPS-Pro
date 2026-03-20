@@ -172,7 +172,8 @@ def _quality_objective(  # noqa: PLR0913, PLR0915
     params["dry_penalty_last_n"] = _sol(
         "dry_penalty_last_n",
         lambda: trial.suggest_categorical(
-            "dry_penalty_last_n", [-1, 0, 64, 128, 256, 512],
+            "dry_penalty_last_n",
+            [-1, 0, 64, 128, 256, 512],
         ),
         default=-1,
     )

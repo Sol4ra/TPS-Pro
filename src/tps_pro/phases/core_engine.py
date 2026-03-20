@@ -127,9 +127,7 @@ def _suggest_layer2_params(
     )
 
     # Thread scheduling (interact with threads)
-    poll = _sol(
-        "poll", lambda: trial.suggest_categorical("poll", [0, 10, 25, 50, 100])
-    )
+    poll = _sol("poll", lambda: trial.suggest_categorical("poll", [0, 10, 25, 50, 100]))
     poll_batch = _sol(
         "poll_batch",
         lambda: trial.suggest_categorical("poll_batch", [0, 10, 25, 50, 100]),
@@ -433,9 +431,7 @@ def _layer1_ab_sweeps(  # noqa: PLR0913
     if phase_config is not None and phase_config.test_flags:
         allowed = set(phase_config.test_flags)
         ab_flags = [
-            (name, cands, dflt)
-            for name, cands, dflt in ab_flags
-            if name in allowed
+            (name, cands, dflt) for name, cands, dflt in ab_flags if name in allowed
         ]
 
     if not ab_flags:

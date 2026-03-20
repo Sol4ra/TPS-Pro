@@ -111,7 +111,11 @@ def _build_importance_html(phases: dict[str, Any]) -> str:
     return importance_html
 
 
-def generate_html_report(results_dir: str | Path | None = None, model_name: str | None = None, gpus: list[dict[str, Any]] | None = None) -> str | None:
+def generate_html_report(
+    results_dir: str | Path | None = None,
+    model_name: str | None = None,
+    gpus: list[dict[str, Any]] | None = None,
+) -> str | None:
     """Generate a comprehensive HTML report from optimization results."""
     from ..constants import SCORE_PP_BASELINE, SCORE_VERSION, TTFT_BASELINE_MS
 

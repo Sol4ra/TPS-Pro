@@ -254,12 +254,16 @@ class TestComputeScoreIntegration:
     def test_higher_tps_higher_score(self):
         """10. Higher TPS = higher score."""
         low = PerfResult(
-            tps=20.0, ttft=TTFT_BASELINE_MS,
-            prompt_tps=SCORE_PP_BASELINE, total_ms=1000.0,
+            tps=20.0,
+            ttft=TTFT_BASELINE_MS,
+            prompt_tps=SCORE_PP_BASELINE,
+            total_ms=1000.0,
         )
         high = PerfResult(
-            tps=80.0, ttft=TTFT_BASELINE_MS,
-            prompt_tps=SCORE_PP_BASELINE, total_ms=1000.0,
+            tps=80.0,
+            ttft=TTFT_BASELINE_MS,
+            prompt_tps=SCORE_PP_BASELINE,
+            total_ms=1000.0,
         )
         assert compute_score(high) > compute_score(low)
 
@@ -267,13 +271,17 @@ class TestComputeScoreIntegration:
     def test_pp_and_ttft_contribute_to_score(self):
         """11. PP and TTFT contribute to score."""
         baseline = PerfResult(
-            tps=50.0, ttft=TTFT_BASELINE_MS,
-            prompt_tps=SCORE_PP_BASELINE, total_ms=1000.0,
+            tps=50.0,
+            ttft=TTFT_BASELINE_MS,
+            prompt_tps=SCORE_PP_BASELINE,
+            total_ms=1000.0,
         )
         # Better PP and TTFT -> higher score
         better = PerfResult(
-            tps=50.0, ttft=TTFT_BASELINE_MS / 2,
-            prompt_tps=SCORE_PP_BASELINE * 2, total_ms=1000.0,
+            tps=50.0,
+            ttft=TTFT_BASELINE_MS / 2,
+            prompt_tps=SCORE_PP_BASELINE * 2,
+            total_ms=1000.0,
         )
         assert compute_score(better) > compute_score(baseline)
 
@@ -281,8 +289,10 @@ class TestComputeScoreIntegration:
     def test_nan_inf_inputs_clamped(self):
         """12. NaN/Inf inputs get clamped to produce finite output."""
         nan_perf = PerfResult(
-            tps=50.0, ttft=float("nan"),
-            prompt_tps=float("inf"), total_ms=1000.0,
+            tps=50.0,
+            ttft=float("nan"),
+            prompt_tps=float("inf"),
+            total_ms=1000.0,
         )
         score = compute_score(nan_perf)
         assert math.isfinite(score)
@@ -290,8 +300,10 @@ class TestComputeScoreIntegration:
 
         # NaN TPS -> 0 score
         nan_tps = PerfResult(
-            tps=float("nan"), ttft=100.0,
-            prompt_tps=300.0, total_ms=500.0,
+            tps=float("nan"),
+            ttft=100.0,
+            prompt_tps=300.0,
+            total_ms=500.0,
         )
         assert compute_score(nan_tps) == 0.0
 
@@ -299,9 +311,12 @@ class TestComputeScoreIntegration:
     def test_score_is_deterministic(self):
         """13. Score is deterministic (same input = same output)."""
         perf = PerfResult(
-            tps=50.0, ttft=TTFT_BASELINE_MS,
-            prompt_tps=SCORE_PP_BASELINE, total_ms=1000.0,
-            vram_used_mb=4096.0, vram_total_mb=8192.0,
+            tps=50.0,
+            ttft=TTFT_BASELINE_MS,
+            prompt_tps=SCORE_PP_BASELINE,
+            total_ms=1000.0,
+            vram_used_mb=4096.0,
+            vram_total_mb=8192.0,
         )
         scores = [compute_score(perf) for _ in range(100)]
         assert all(s == scores[0] for s in scores)
@@ -310,7 +325,10 @@ class TestComputeScoreIntegration:
     def test_pareto_mode_returns_tuple(self):
         """14. Pareto mode returns tuple of objectives."""
         perf = PerfResult(
-            tps=60.0, ttft=200.0, prompt_tps=500.0, total_ms=800.0,
+            tps=60.0,
+            ttft=200.0,
+            prompt_tps=500.0,
+            total_ms=800.0,
             vram_used_mb=5000.0,
         )
         result = compute_pareto_objectives(perf, quality_factor=0.85)
@@ -336,8 +354,12 @@ class TestMeasureConcurrentLoadIntegration:
         ctx = _make_ctx()
         user_results = [
             ConcurrentUserResult(
-                user_id=i, tps=40.0, ttft=100.0, prompt_tps=300.0,
-                wall_time=2000.0, success=True,
+                user_id=i,
+                tps=40.0,
+                ttft=100.0,
+                prompt_tps=300.0,
+                wall_time=2000.0,
+                success=True,
             )
             for i in range(6)
         ]
@@ -364,7 +386,9 @@ class TestMeasureConcurrentLoadIntegration:
         ctx = _make_ctx()
         user_results = [
             ConcurrentUserResult(
-                user_id=i, success=False, error="status 500",
+                user_id=i,
+                success=False,
+                error="status 500",
             )
             for i in range(4)
         ]

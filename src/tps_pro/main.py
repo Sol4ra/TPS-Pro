@@ -118,21 +118,25 @@ def _cycle_preset() -> None:
 
 def _view_results() -> None:
     from .cli.display import view_results
+
     view_results()
 
 
 def _advanced_menu() -> None:
     from .cli.menu import advanced_menu
+
     advanced_menu()
 
 
 def _switch_model() -> None:
     from .cli.wizard import switch_model
+
     switch_model()
 
 
 def _context_menu() -> None:
     from .cli.menu import context_menu
+
     context_menu()
 
 
@@ -208,6 +212,7 @@ def main() -> None:  # noqa: C901, PLR0915
     ensure_results_dir(ctx)
 
     import optuna
+
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     if get_config("dry_run"):
@@ -222,6 +227,7 @@ def main() -> None:  # noqa: C901, PLR0915
 
     if get_config("dashboard"):
         from .cli.dashboard import launch_dashboard
+
         launch_dashboard(ctx)
 
     from .hardware import kill_competing_processes
@@ -231,6 +237,7 @@ def main() -> None:  # noqa: C901, PLR0915
     # Batch mode
     if get_config("batch_dir"):
         from .pipeline import batch_optimize
+
         try:
             batch_optimize(
                 models_dir=get_config("batch_dir"),

@@ -320,5 +320,3 @@ def context_menu() -> None:
     else:
         print(f"  Context set to {int(choice):,}.")
     _pause()
-
-

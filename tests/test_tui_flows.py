@@ -206,7 +206,9 @@ class TestPresetCycle:
         out = result.stdout
         # At least two of the three preset names should appear.
         hits = sum(1 for name in ("thorough", "quick", "normal") if name in out)
-        assert hits >= 2, f"Expected at least 2 preset names in output, got: {out[-800:]}"
+        assert hits >= 2, (
+            f"Expected at least 2 preset names in output, got: {out[-800:]}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -350,9 +352,9 @@ class TestAdvancedResetDBConfirm:
         result = _run_tui("a\nr\ny\n\nb\nq\n")
         _assert_clean(result, label="reset_db_yes")
         out = result.stdout.lower()
-        assert "delete" in out or "reset" in out or "fresh" in out or "cancelled" in out, (
-            "Expected reset confirmation or cancellation message"
-        )
+        assert (
+            "delete" in out or "reset" in out or "fresh" in out or "cancelled" in out
+        ), "Expected reset confirmation or cancellation message"
 
 
 # ---------------------------------------------------------------------------

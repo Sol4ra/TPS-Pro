@@ -56,7 +56,13 @@ class TestPhaseQualityBehavior:
     @patch(f"{_Q}.boot_server_with_jinja_recovery")
     @patch(f"{_Q}.setup_study")
     def test_completed_study_returns_best_params(
-        self, mock_setup, mock_boot, mock_quality, mock_build, mock_load, mock_clear,
+        self,
+        mock_setup,
+        mock_boot,
+        mock_quality,
+        mock_build,
+        mock_load,
+        mock_clear,
         make_ctx,
     ):
         """When study has already completed all trials, returns best_trial params."""

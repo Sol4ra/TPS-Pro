@@ -271,7 +271,12 @@ def phase_moe_sweep(  # noqa: C901, PLR0912, PLR0915
     # --- Pick initial winner and recheck neighbors ---
     best_moe, best_perf, best_score = max(results, key=lambda r: r[2])
     best_moe, best_perf, best_score = _recheck_neighbors(
-        ctx, base_config, best_moe, best_perf, best_score, results,
+        ctx,
+        base_config,
+        best_moe,
+        best_perf,
+        best_score,
+        results,
     )
 
     _log_results_summary(baseline, baseline_score, best_perf, best_score, best_moe)

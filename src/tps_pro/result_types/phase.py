@@ -64,7 +64,6 @@ class TrialSummary(_DictAccessMixin):
     params: dict = field(default_factory=dict)
 
 
-
 @dataclass(frozen=True)
 class PhaseResult(_DictAccessMixin):
     """Saved phase output from print_phase_summary / save_phase_results."""
@@ -100,4 +99,3 @@ class PhaseResult(_DictAccessMixin):
             all_trials=trials,
             score_version=data.get("score_version"),
         )
-

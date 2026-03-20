@@ -98,15 +98,22 @@ def _make_pipeline_config():
     phases = [
         PhaseConfig(phase="gpu_offload", display_name="GPU Offload"),
         PhaseConfig(
-            phase="kv_context_sweep", display_name="KV + Context Sweep",
+            phase="kv_context_sweep",
+            display_name="KV + Context Sweep",
             kv_types=["f16", "q8_0", "q4_0"],
         ),
         PhaseConfig(
-            phase="core_engine", display_name="Core Engine",
+            phase="core_engine",
+            display_name="Core Engine",
             trials=100,
             search_params=[
-                "threads", "threads_batch", "batch_size",
-                "ubatch_size", "flash_attn", "poll", "poll_batch",
+                "threads",
+                "threads_batch",
+                "batch_size",
+                "ubatch_size",
+                "flash_attn",
+                "poll",
+                "poll_batch",
             ],
         ),
         PhaseConfig(phase="speculation", display_name="Speculation", trials=40),
