@@ -28,6 +28,7 @@ dev = [
     "black",
     "ruff",
     "mypy",
+    "types-requests",
 ]
 
 [tool.pytest.ini_options]
