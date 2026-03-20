@@ -380,7 +380,8 @@ def phase_quality(  # noqa: C901, PLR0912, PLR0915
     close_phase_pbar()
 
     best_trial = get_best_trial(ctx, study)
-    beat_baseline = best_trial.value > baseline_score
+    best_score = best_trial.value or 0.0
+    beat_baseline = best_score > baseline_score
 
     logger.info("")
     logger.info("=" * 60)
@@ -391,13 +392,13 @@ def phase_quality(  # noqa: C901, PLR0912, PLR0915
     if beat_baseline:
         logger.info(
             "  Optimal:  %.0f%% — beats baseline by %.0f%%",
-            best_trial.value,
-            best_trial.value - baseline_score,
+            best_score,
+            best_score - baseline_score,
         )
     else:
         logger.info(
             "  Optimal:  %.0f%% — BELOW baseline (%.0f%%)",
-            best_trial.value,
+            best_score,
             baseline_score,
         )
         logger.info("  No trial beat baseline. Using default sampling params.")
@@ -413,7 +414,7 @@ def phase_quality(  # noqa: C901, PLR0912, PLR0915
         "phase": "quality",
         "baseline_score": baseline_score,
         "beat_baseline": beat_baseline,
-        "best_score": best_trial.value,
+        "best_score": best_score,
         "best_params": returned_params,
         "eval_tasks": [
             {"prompt": p, "answer": a, "category": c} for p, a, c in QUALITY_TASKS

@@ -74,8 +74,8 @@ def _encode_param(
         num_value: float = float(value)
         return (num_value - low) / max(1, high - low)
     elif isinstance(distribution, optuna.distributions.FloatDistribution):
-        low, high = distribution.low, distribution.high
-        return (float(value) - low) / max(1e-8, high - low)
+        f_low, f_high = distribution.low, distribution.high
+        return (float(value) - f_low) / max(1e-8, f_high - f_low)
     return 0.5
 
 
