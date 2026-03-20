@@ -193,15 +193,15 @@ def phase_speculation(  # noqa: C901, PLR0915
         ctx, "speculation", effective_trials, is_pareto=is_pareto
     )
     if remaining == 0:
-        best = get_best_trial(ctx, study)
+        best_trial = get_best_trial(ctx, study)
         logger.info(
             "Best Score: %.1f | TPS: %.1f",
-            trial_scalar_value(best),
-            best.user_attrs.get("tps", 0),
+            trial_scalar_value(best_trial),
+            best_trial.user_attrs.get("tps", 0),
         )
         print_param_importance(study)
         clear_param_cache(study.study_name)
-        return PhaseReturnDict(best_params=best.params, phase_name="speculation")
+        return PhaseReturnDict(best_params=best_trial.params, phase_name="speculation")
 
     if base_config is None:
         base_config = cast(EngineConfig, dict(ctx.naked_engine))

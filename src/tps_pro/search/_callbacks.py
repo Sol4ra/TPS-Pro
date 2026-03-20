@@ -71,10 +71,11 @@ def _encode_param(
         return idx / max(1, len(choices) - 1)
     elif isinstance(distribution, optuna.distributions.IntDistribution):
         low, high = distribution.low, distribution.high
-        return (value - low) / max(1, high - low)
+        num_value: float = float(value)
+        return (num_value - low) / max(1, high - low)
     elif isinstance(distribution, optuna.distributions.FloatDistribution):
         low, high = distribution.low, distribution.high
-        return (value - low) / max(1e-8, high - low)
+        return (float(value) - low) / max(1e-8, high - low)
     return 0.5
 
 
@@ -336,7 +337,7 @@ class GPStoppingCallback:
             return
 
         gp, X, y = gp_result  # noqa: N806
-        best_y = np.max(y)
+        best_y: float = float(np.max(y))
 
         max_ei = self._compute_expected_improvement(gp, best_y, param_names)
         self._check_stopping_criteria(max_ei, best_y, below_baseline, too_early, study)

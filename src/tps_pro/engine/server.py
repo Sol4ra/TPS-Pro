@@ -116,7 +116,7 @@ def start_server(ctx: AppContext, engine_config: EngineConfig) -> ServerProcess:
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
-        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+        creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         if sys.platform == "win32"
         else 0,
     )

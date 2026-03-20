@@ -146,7 +146,7 @@ def run_bench_trial(
             capture_output=True,
             text=True,
             timeout=BENCH_SUBPROCESS_TIMEOUT,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             if sys.platform == "win32"
             else 0,
         )

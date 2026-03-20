@@ -147,7 +147,7 @@ def check_and_mark_duplicate_trial(trial: optuna.Trial) -> float | list[float] |
                     _param_cache[study_key][key] = past
 
         key = tuple(sorted(trial.params.items()))
-        past = _param_cache[study_key].get(key)
+        past = _param_cache[study_key].get(key)  # type: ignore[assignment]
     if past is not None:
         for k, v in past.user_attrs.items():
             trial.set_user_attr(k, v)
@@ -195,7 +195,7 @@ def setup_study(  # noqa: PLR0913
         pruner = optuna.pruners.WilcoxonPruner(p_threshold=0.1)
 
     if is_pareto:
-        sampler = optuna.samplers.NSGAIISampler(seed=seed)
+        sampler: optuna.samplers.BaseSampler = optuna.samplers.NSGAIISampler(seed=seed)
         study = optuna.create_study(
             directions=["maximize", "maximize", "maximize"],
             study_name=versioned_name,

@@ -115,7 +115,7 @@ class BestScoreTracker:
     __slots__ = ("value",)
 
     def __init__(self, initial: float = 0.0) -> None:
-        self.value = initial
+        self.value: float = initial
 
 
 def thermal_gate() -> None:
@@ -413,7 +413,7 @@ def print_phase_summary(
         ],
     }
     save_phase_results(ctx, phase_name, results)
-    return returned_params, results
+    return cast(EngineConfig, returned_params), results
 
 
 def setup_baseline_server(
