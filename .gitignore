@@ -1,3 +1,14 @@
 python/
+bin/
 __pycache__/
+.pytest_cache/
+.ruff_cache/
 results/
+.desloppify/
+.env
+*.egg-info/
+build/
+dist/
+*.pyc
+.coverage
+htmlcov/

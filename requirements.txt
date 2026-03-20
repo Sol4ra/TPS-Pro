@@ -1,9 +1,6 @@
-optuna
-requests
-numpy
-scipy
-scikit-learn
-pynvml
-psutil
-tqdm
-aiohttp
+optuna>=3.6.0
+requests>=2.31.0
+numpy>=1.23.0
+pynvml>=11.0.0
+psutil>=5.9.0
+aiohttp>=3.9.4

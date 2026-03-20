@@ -1,0 +1,10 @@
+[
+  "Implement a Python class for a thread-safe connection pool with configurable max connections, idle timeout, and health checking. The pool should support both sync and async contexts.",
+  "Design a database schema for a multi-tenant SaaS application with row-level security, audit logging, and soft deletes. Consider indexing strategies for common query patterns.",
+  "Write a comprehensive test suite for a REST API that handles user authentication, including unit tests for token validation, integration tests for login flow, and load tests.",
+  "Create a CI/CD pipeline configuration that supports multi-environment deployments with canary releases, automatic rollbacks on error rate thresholds, and Slack notifications.",
+  "Implement a distributed cache invalidation system using pub/sub messaging. Handle network partitions gracefully and ensure eventual consistency across all cache nodes.",
+  "Design a logging and monitoring architecture for a microservices system with structured logging, distributed tracing, metric aggregation, and alerting rules.",
+  "Write a data pipeline that ingests CSV files, validates schema, deduplicates records, applies business transformations, and loads into a star schema warehouse.",
+  "Implement rate limiting middleware with sliding window algorithm, per-user quotas, burst allowance, and graceful degradation under high load conditions."
+]

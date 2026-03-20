@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llama-optimizer"
+version = "0.1.0"
+description = "Multi-phase coordinate descent parameter optimizer for llama-server using Optuna"
+requires-python = ">=3.9"
+dependencies = [
+    "optuna>=3.6.0",
+    "requests>=2.31.0",
+    "numpy>=1.23.0",
+    "pynvml>=11.0.0",
+    "psutil>=5.9.0",
+    "aiohttp>=3.9.4",
+]
+
+[project.optional-dependencies]
+gp = [
+    "scikit-learn>=1.1.0",
+    "scipy>=1.9.0",
+]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "black",
+    "ruff",
+    "mypy",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Run with coverage: pytest --cov=tps_pro --cov-report=term-missing
+addopts = [
+    "--strict-markers",
+    "--cov=src/tps_pro",
+    "--cov-fail-under=65",
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests requiring a running server",
+    "unit: marks unit tests",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"tools/*" = ["N806", "E501"]
+"src/tps_pro/engine/platform.py" = ["N801"]
+"src/tps_pro/cli/report.py" = ["E501"]  # HTML/CSS templates have long lines
+"tests/_tui_harness.py" = ["E402"]  # Test harness uses deliberate late imports after patching
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+disallow_untyped_defs = true
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]

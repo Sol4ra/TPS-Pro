@@ -1,0 +1,17 @@
+[
+  {
+    "fact": "The secret project codename is Operation Sapphire Falcon.",
+    "query": "What is the secret project codename?",
+    "expected": "sapphire falcon"
+  },
+  {
+    "fact": "The database migration is scheduled for March 27th at 3:00 AM UTC.",
+    "query": "When is the database migration scheduled?",
+    "expected": "march 27"
+  },
+  {
+    "fact": "The API rate limit for premium users is 4,500 requests per minute.",
+    "query": "What is the API rate limit for premium users?",
+    "expected": "4,500"
+  }
+]

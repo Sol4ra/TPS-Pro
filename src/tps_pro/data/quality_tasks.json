@@ -1,0 +1,52 @@
+[
+  {
+    "prompt": "A store sells notebooks for $4 each. They offer a 15% discount on orders of 10 or more. Sarah buys 12 notebooks, and her friend buys 7 notebooks in a separate order. What is the total amount they pay combined?\n\n(A) $73.60\n(B) $76.00\n(C) $68.80\n(D) $72.40\n\nThink step by step, then answer with just the letter.",
+    "answer": "C",
+    "category": "math"
+  },
+  {
+    "prompt": "A train leaves Station A at 9:00 AM traveling at 80 km/h. Another train leaves Station B (which is 420 km from Station A) at 10:00 AM traveling toward Station A at 100 km/h. At what time do they meet?\n\n(A) 11:20 AM\n(B) 12:00 PM\n(C) 11:53 AM\n(D) 12:20 PM\n\nThink step by step, then answer with just the letter.",
+    "answer": "C",
+    "category": "math"
+  },
+  {
+    "prompt": "A rectangular pool is 25m long, 10m wide, and 2m deep. Water fills at 500 liters per minute. If the pool is currently 40% full, how many more hours are needed to fill it completely?\n\n(A) 6 hours\n(B) 10 hours\n(C) 8 hours\n(D) 5 hours\n\nThink step by step, then answer with just the letter.",
+    "answer": "B",
+    "category": "math"
+  },
+  {
+    "prompt": "Five people (A, B, C, D, E) sit in a row. B sits immediately to the right of A. C does not sit next to D. E sits at one of the ends. D sits in the middle (position 3). Which of these arrangements is valid?\n\n(A) E, A, D, B, C\n(B) A, B, D, C, E\n(C) E, A, D, C, B\n(D) A, B, D, E, C\n\nThink step by step, then answer with just the letter.",
+    "answer": "B",
+    "category": "reasoning"
+  },
+  {
+    "prompt": "In a tournament, every team plays every other team exactly once. There are 8 teams. If each game takes 45 minutes and 2 games can be played simultaneously on 2 fields, what is the minimum total time needed to complete the tournament?\n\n(A) 10 hours 30 minutes\n(B) 10 hours 15 minutes\n(C) 5 hours 15 minutes\n(D) 21 hours\n\nThink step by step, then answer with just the letter.",
+    "answer": "A",
+    "category": "reasoning"
+  },
+  {
+    "prompt": "In a double-slit experiment, the distance between the slits is halved while the wavelength of light used is doubled. What happens to the fringe spacing on the screen?\n\n(A) It remains the same\n(B) It doubles\n(C) It quadruples\n(D) It halves\n\nThink step by step, then answer with just the letter.",
+    "answer": "C",
+    "category": "stem"
+  },
+  {
+    "prompt": "A protein has a mutation that changes a hydrophobic leucine residue in the core to a charged glutamic acid residue. Which of the following is the most likely primary consequence?\n\n(A) Enhanced enzymatic activity due to new charge interactions\n(B) Protein misfolding due to disruption of the hydrophobic core\n(C) Increased protein-protein binding specificity\n(D) No significant effect since single mutations rarely matter\n\nThink step by step, then answer with just the letter.",
+    "answer": "B",
+    "category": "stem"
+  },
+  {
+    "prompt": "What does this Python code print?\n\n```python\ndef f(n, memo={}):\n    if n in memo: return memo[n]\n    if n <= 1: return n\n    memo[n] = f(n-1, memo) + f(n-2, memo)\n    return memo[n]\n\nresult = [f(i) % 10 for i in range(10, 15)]\nprint(sum(result))\n```\n\n(A) 25\n(B) 28\n(C) 23\n(D) 21\n\nThink step by step, then answer with just the letter.",
+    "answer": "B",
+    "category": "code"
+  },
+  {
+    "prompt": "What is the output of this code?\n\n```python\nx = [1, 2, 3, 4, 5]\ny = x[1::2]\nz = [a * b for a, b in zip(x[::2], y)]\nprint(z)\n```\n\n(A) [2, 12]\n(B) [2, 6, 20]\n(C) [2, 12, 25]\n(D) [1, 6, 15]\n\nThink step by step, then answer with just the letter.",
+    "answer": "A",
+    "category": "code"
+  },
+  {
+    "prompt": "A researcher tests a drug on 1000 patients. The drug has an actual effectiveness rate of 95%. The test has a 2% false positive rate and a 5% false negative rate. If a patient tests positive, what is the approximate probability they actually benefit from the drug?\n\n(A) 95%\n(B) 97%\n(C) 99%\n(D) 93%\n\nThink step by step, then answer with just the letter.",
+    "answer": "C",
+    "category": "reasoning"
+  }
+]

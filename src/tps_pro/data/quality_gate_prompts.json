@@ -1,0 +1,12 @@
+[
+  {
+    "source": "GPQA Diamond",
+    "domain": "graduate-level physics (energy-time uncertainty principle)",
+    "prompt": "Two quantum states with energies E1 and E2 have a lifetime of 10^-9 sec and 10^-8 sec, respectively. We want to clearly distinguish these two energy levels. Which one of the following options could be their energy difference so that they can be clearly resolved?\n\n(A) 10^-8 eV\n(B) 10^-9 eV\n(C) 10^-4 eV\n(D) 10^-11 eV\n\nExplain your reasoning step by step before giving your final answer."
+  },
+  {
+    "source": "GPQA Diamond",
+    "domain": "graduate-level biology (mitochondrial genetics)",
+    "prompt": "Mitochondria are semi-autonomous cellular organelles in charge of energy production. They encode for a part of their own translational machinery and respiratory complexes. Mitochondrial function is governed by over a thousand proteins imported from the cell, contributing to processes like the transport of proteins, ribosome biogenesis and translation regulation, respiratory oxidation, metabolism, and apoptotic signaling cascade. Mutations in the code for mitochondrial protein networks can cause numerous diseases in humans that are inherited through generations. Mutations of which of the mitochondrial proteins listed below are least likely to be genetically transmitted from a father to his children?\n\n(A) Translocase of inner mitochondrial membrane 17B\n(B) ATP binding cassette subfamily B member 8\n(C) NADH dehydrogenase 2\n(D) Tu translation elongation factor, mitochondrial\n\nExplain your reasoning step by step before giving your final answer."
+  }
+]

@@ -4,6 +4,7 @@ cd /d "%~dp0"
 chcp 65001 >nul 2>&1
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
+set "PATH=%~dp0bin;%PATH%"
 set "PYTHON=%~dp0python\python.exe"
 set "PIP=%~dp0python\Scripts\pip.exe"
 set "GETPIP=%~dp0python\get-pip.py"
@@ -34,9 +35,8 @@ echo     Done.
 echo.
 
 :run
-cd /d "%~dp0.."
-"%PYTHON%" -W ignore::FutureWarning -m llama_optimizer_2_v3_final %*
 cd /d "%~dp0"
+"%PYTHON%" -W ignore::FutureWarning -m tps_pro %*
 pause
 goto :eof
 
