@@ -1,4 +1,5 @@
-"""Tests for engine/server.py — ServerProcess dataclass, parsing helpers, and command building.
+"""Tests for engine/server.py — ServerProcess dataclass, parsing helpers, and
+command building.
 
 Covers ServerProcess, _is_oom, _is_error_line, _parse_load_time, and all _add_*_args
 command building functions.

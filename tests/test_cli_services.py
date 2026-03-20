@@ -1,4 +1,5 @@
-"""Tests for CLI services modules — services_config, services_pipeline, services_command.
+"""Tests for CLI services modules — services_config, services_pipeline,
+services_command.
 
 Tests cover:
     - cycle_preset cycles through presets

@@ -1,4 +1,5 @@
-"""Comprehensive tests for hardware.py — GPU detection, VRAM caching, thermal monitoring, process cleanup.
+"""Comprehensive tests for hardware.py — GPU detection, VRAM caching,
+thermal monitoring, process cleanup.
 
 All hardware dependencies (pynvml, psutil, subprocess) are mocked so tests run
 on any machine without a GPU.
@@ -253,7 +254,8 @@ class TestGetVramUsedMb:
 
     @pytest.mark.unit
     def test_returns_cached_value_within_ttl(self):
-        """Second call within TTL returns cached value without calling detect_gpus again."""
+        """Second call within TTL returns cached value without calling detect_gpus
+        again."""
         mock_pynvml = MagicMock()
         mock_pynvml.nvmlDeviceGetCount.return_value = 1
         mock_pynvml.nvmlDeviceGetHandleByIndex.return_value = "h"
@@ -317,7 +319,8 @@ class TestGetVramUsedMb:
 
     @pytest.mark.unit
     def test_thread_safety(self):
-        """Multiple threads calling get_vram_used_mb concurrently don't corrupt state."""
+        """Multiple threads calling get_vram_used_mb concurrently don't corrupt
+        state."""
         mock_pynvml = MagicMock()
         mock_pynvml.nvmlDeviceGetCount.return_value = 1
         mock_pynvml.nvmlDeviceGetHandleByIndex.return_value = "h"

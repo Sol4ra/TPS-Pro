@@ -116,7 +116,8 @@ class TestEncodeDecodeRoundTrip:
         assert _decode_param(0.5, dist) == pytest.approx(0.0, abs=1e-4)
 
     def test_single_choice_categorical(self):
-        """Single-choice categorical: encode and decode should both return the only choice."""
+        """Single-choice categorical: encode and decode should both return the only
+        choice."""
         dist = optuna.distributions.CategoricalDistribution(choices=["only"])
         assert _encode_param("only", dist) == pytest.approx(0.0)
         assert _decode_param(0.0, dist) == "only"
@@ -149,7 +150,8 @@ class TestExpectedImprovement:
         assert ei[0] == pytest.approx(0.0, abs=1e-3)
 
     def test_higher_sigma_higher_ei_for_same_mu(self):
-        """More uncertainty (higher sigma) should give higher EI for same mu near best_y."""
+        """More uncertainty (higher sigma) should give higher EI for same mu near
+        best_y."""
         mu = np.array([10.0, 10.0])
         sigma = np.array([1.0, 5.0])
         ei = _expected_improvement(mu, sigma, best_y=10.0)

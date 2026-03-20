@@ -13,7 +13,7 @@ import pytest
 from tps_pro.pipeline import (
     run_full_pipeline,
 )
-from tps_pro.pipeline_config import PipelineConfig, PhaseConfig
+from tps_pro.pipeline_config import PhaseConfig, PipelineConfig
 
 # ---------------------------------------------------------------------------
 # Module paths for patching (pipeline.py re-imports these names)
@@ -596,7 +596,8 @@ class TestRunFullPipeline:
 
     @pytest.mark.unit
     def test_kv_context_sweep_results_merged_into_best_config(self):
-        """KV context sweep best_params are merged into best_config before core engine."""
+        """KV context sweep best_params are merged into best_config before core
+        engine."""
         ctx_mock = _make_mock_ctx()
         patches = self._build_patches(ctx_mock=ctx_mock)
         patches[f"{_P}.phase_kv_context_sweep"] = MagicMock(

@@ -16,7 +16,7 @@ from tps_pro.pipeline import (
     _validated_config_merge,
     run_full_pipeline,
 )
-from tps_pro.pipeline_config import PipelineConfig, PhaseConfig
+from tps_pro.pipeline_config import PhaseConfig, PipelineConfig
 
 # ---------------------------------------------------------------------------
 # Module paths for patching

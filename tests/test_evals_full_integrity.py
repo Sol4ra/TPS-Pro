@@ -9,14 +9,12 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
-
 from _evals_full_helpers import (
     _chat_completion_response,
     _logprob_token,
     _mock_response,
-    _patch_ctx,
+    _patch_ctx,  # noqa: F401 — pytest fixture
 )
-
 
 # ===================================================================
 # integrity.py — phase_reasoning_eval, phase_integrity_eval

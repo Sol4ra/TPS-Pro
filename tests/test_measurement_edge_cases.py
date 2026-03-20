@@ -22,7 +22,6 @@ from tps_pro.measurement.perf_measurement import (
 from tps_pro.measurement.scoring import _clamp_finite
 from tps_pro.result_types import PerfResult, PerfSample
 
-
 # ===================================================================
 # _clamp_finite
 # ===================================================================

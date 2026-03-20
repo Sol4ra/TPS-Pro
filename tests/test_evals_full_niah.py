@@ -1,17 +1,16 @@
-"""Tests for evals submodules: niah.py — build_niah_prompt, tokenize_count, niah_test."""
+"""Tests for evals submodules: niah.py — build_niah_prompt, tokenize_count,
+niah_test."""
 
 from __future__ import annotations
 
 from unittest.mock import patch
 
 import pytest
-
 from _evals_full_helpers import (
     _chat_completion_response,
     _mock_response,
-    _patch_ctx,
+    _patch_ctx,  # noqa: F401 — pytest fixture
 )
-
 
 # ===================================================================
 # niah.py — build_niah_prompt, tokenize_count, niah_test

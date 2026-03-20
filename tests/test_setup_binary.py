@@ -5,9 +5,7 @@ download_and_extract(), ensure_llama_server(), _check_nvidia_gpu(),
 _check_amd_gpu().
 """
 
-import subprocess
 import zipfile
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,7 +21,6 @@ from tps_pro.cli.setup_binary import (
     ensure_llama_server,
     get_latest_release,
 )
-
 
 # ============================================================
 # _check_nvidia_gpu()
@@ -42,7 +39,7 @@ class TestCheckNvidiaGpu:
         mock_pynvml.nvmlDeviceGetName.return_value = "NVIDIA GeForce RTX 5080"
 
         with patch.dict("sys.modules", {"pynvml": mock_pynvml}):
-            with patch("tps_pro.cli.setup_binary.subprocess.run") as mock_run:
+            with patch("tps_pro.cli.setup_binary.subprocess.run"):
                 # pynvml should succeed, subprocess should not be called
                 result = _check_nvidia_gpu()
                 assert result == "NVIDIA GeForce RTX 5080"

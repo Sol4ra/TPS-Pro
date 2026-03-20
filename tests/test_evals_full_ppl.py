@@ -1,4 +1,5 @@
-"""Tests for evals submodules: perplexity, quality_gate, mcq helpers, kl_divergence helpers.
+"""Tests for evals submodules: perplexity, quality_gate, mcq helpers,
+kl_divergence helpers.
 
 Covers TestMeasureTruePerplexity, TestMeasureQualityGate, TestExtractAnswerLogprob,
 TestEvalSingleTask, and TestCollectLogprobDistribution.
@@ -10,14 +11,12 @@ import math
 from unittest.mock import patch
 
 import pytest
-
 from _evals_full_helpers import (
     _chat_completion_response,
     _logprob_token,
     _mock_response,
-    _patch_ctx,
+    _patch_ctx,  # noqa: F401, F811 — pytest fixture, must be imported
 )
-
 
 # ===================================================================
 # perplexity.py — measure_true_perplexity

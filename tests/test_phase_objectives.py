@@ -1,4 +1,5 @@
-"""Tests for phase objective functions across Core Engine, Speculation, MoE Sweep, and GPU Offload.
+"""Tests for phase objective functions across Core Engine, Speculation, MoE Sweep,
+and GPU Offload.
 
 Covers:
     Core Engine:
@@ -30,17 +31,16 @@ Covers:
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import optuna
 import pytest
 
 from tps_pro.phases.core_engine import (
-    _ObjectiveParams,
     _build_ab_flags,
     _layer1_ab_sweeps,
     _layer2_objective,
+    _ObjectiveParams,
     _run_single_ab_test,
 )
 from tps_pro.phases.gpu_offload import (
@@ -57,7 +57,6 @@ from tps_pro.phases.speculation import (
 )
 from tps_pro.phases.trial_helpers import BestScoreTracker
 from tps_pro.result_types import PerfResult
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -84,7 +83,8 @@ class TestBuildAbFlags:
     """Tests 1-2: _build_ab_flags."""
 
     def test_returns_correct_flags_for_dense_model(self):
-        """Dense model (no skip flags) should include op_offload, repack, prio, prio_batch."""
+        """Dense model (no skip flags) should include op_offload, repack, prio,
+        prio_batch."""
         winners, ab_flags = _build_ab_flags(skip_flags=set())
         ab_names = [name for name, _, _ in ab_flags]
 
@@ -187,7 +187,8 @@ class TestLayer1AbSweep:
     def test_produces_winners_dict_with_all_flags(
         self, _kill, mock_boot, mock_measure, make_ctx
     ):
-        """Winners dict should contain entries for every flag (A/B tested + hardcoded)."""
+        """Winners dict should contain entries for every flag (A/B tested +
+        hardcoded)."""
         ctx = make_ctx(skip_flags=set())
         mock_boot.return_value = (MagicMock(), "ok")
 
@@ -447,7 +448,8 @@ class TestBuildSpecConfig:
         assert "ngram-cache" in params_short
 
     def test_lookup_cache_added_when_enabled(self):
-        """When use_lookup_cache=True with a file, lookup_cache_dynamic should be set."""
+        """When use_lookup_cache=True with a file, lookup_cache_dynamic should be
+        set."""
         base = {"context": 4096}
         params = {
             "spec_type": "ngram-simple",
@@ -510,7 +512,8 @@ class TestSpeculationUsesBaseConfig:
     def test_uses_base_config_not_naked_engine(
         self, mock_study, mock_baseline, _cache, mock_summary, _run, make_ctx
     ):
-        """When base_config is provided, speculation should use it, not ctx.naked_engine."""
+        """When base_config is provided, speculation should use it, not
+        ctx.naked_engine."""
         ctx = make_ctx(
             config={"pareto": False},
             naked_engine={"context": 2048, "threads": 4},

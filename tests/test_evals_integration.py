@@ -10,7 +10,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+from _ctx_factory import make_ctx_from_defaults
 
+from tps_pro.evals.integrity import phase_integrity_eval, phase_reasoning_eval
+from tps_pro.evals.kl_divergence import _compute_kl_divergence
 from tps_pro.evals.mcq import (
     _extract_answer_letter,
     _extract_answer_logprob,
@@ -19,15 +22,10 @@ from tps_pro.evals.mcq import (
 )
 from tps_pro.evals.niah import TokenizeCache, build_niah_prompt, niah_test
 from tps_pro.evals.perplexity import measure_true_perplexity, ppl_quality_factor
-from tps_pro.evals.kl_divergence import _compute_kl_divergence
-from tps_pro.evals.integrity import phase_reasoning_eval, phase_integrity_eval
 from tps_pro.phases.kv_sweep_measure import (
     _build_variable_tracking_prompt,
 )
 from tps_pro.result_types import QualityResult, QualityTaskResult
-
-from _ctx_factory import make_ctx_from_defaults
-
 
 # ---------------------------------------------------------------------------
 # Helpers

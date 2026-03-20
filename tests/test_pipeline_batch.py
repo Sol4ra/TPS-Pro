@@ -436,7 +436,8 @@ class TestBatchOptimize:
         mock_pipeline,
         tmp_path,
     ):
-        """Per-model timeout is converted to a deadline and passed to run_full_pipeline."""
+        """Per-model timeout is converted to a deadline and passed to
+        run_full_pipeline."""
         self._create_gguf_files(tmp_path, ["model.gguf"])
 
         mock_ctx.config = {}

@@ -10,7 +10,6 @@ Tests cover:
 from __future__ import annotations
 
 import inspect
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import optuna
@@ -18,8 +17,6 @@ import pytest
 
 from tps_pro.phases.speculation import (
     _build_spec_config,
-    _clear_lookup_cache_if_needed,
-    _suggest_spec_params,
     phase_speculation,
 )
 
@@ -91,7 +88,7 @@ class TestPhaseSpeculation:
     def test_suggest_spec_params_prune_on_min_gte_max(self):
         """_suggest_spec_params should prune when draft_min >= draft_max."""
         study = optuna.create_study()
-        trial = study.ask()
+        study.ask()
         # Force draft_min >= draft_max by using fixed distributions
         # This is tricky with Optuna, so we test _build_spec_config constraint instead
         params = {

@@ -24,7 +24,10 @@ class TestSuppressOptunaWarnings:
                 def _suppress_optuna_warnings():
                     import warnings
                     import optuna
-                    warnings.filterwarnings("ignore", category=optuna.exceptions.ExperimentalWarning)
+                    warnings.filterwarnings(
+                        "ignore",
+                        category=optuna.exceptions.ExperimentalWarning,
+                    )
             """)
             mod = types.ModuleType(mod_name)
             exec(code, mod.__dict__)
@@ -32,7 +35,8 @@ class TestSuppressOptunaWarnings:
         mod._suppress_optuna_warnings()  # should not raise
 
     def test_suppress_optuna_warnings_filters_experimental(self):
-        """After calling _suppress_optuna_warnings, ExperimentalWarning should be filtered."""
+        """After calling _suppress_optuna_warnings, ExperimentalWarning should be
+        filtered."""
         import warnings
 
         import optuna

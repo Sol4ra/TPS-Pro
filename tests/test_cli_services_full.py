@@ -12,7 +12,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -548,8 +547,6 @@ class TestGetModelResults:
 
         # Simpler approach: just monkeypatch the function's local resolution
         # by replacing the results dir computation with a direct patch.
-        original_fn = sp_mod.get_model_results
-
         def patched_get_model_results(ctx):
             # Inline the function logic with our tmp_path as base_results_dir
             from datetime import datetime

@@ -25,12 +25,12 @@ from tps_pro.phases.gpu_offload import phase_gpu_offload
 from tps_pro.phases.moe_shared import (
     _run_middle_out_sweep,
 )
-from tps_pro.phases.trial_helpers import thermal_gate
 from tps_pro.phases.quality import phase_quality
 from tps_pro.phases.speculation import phase_speculation
 from tps_pro.phases.tensor_split import (
     phase_tensor_split,
 )
+from tps_pro.phases.trial_helpers import thermal_gate
 from tps_pro.phases.workload import (
     phase_context_sweep,
     phase_workload_sim,
@@ -260,7 +260,8 @@ class TestPhaseReturnTypes:
 
     @patch("tps_pro.phases.gpu_offload.load_phase_results")
     def test_gpu_offload_returns_dict(self, mock_load):
-        """phase_gpu_offload should return a PhaseReturnDict with best_params containing n_gpu_layers."""
+        """phase_gpu_offload should return a PhaseReturnDict with best_params
+        containing n_gpu_layers."""
         mock_load.return_value = {"best_ngl": 33}
         ctx = _make_ctx()
         result = phase_gpu_offload(ctx)

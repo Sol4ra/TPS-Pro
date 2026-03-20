@@ -395,7 +395,8 @@ class TestSavePhaseResults:
 
     @pytest.mark.unit
     def test_writes_correct_json_structure(self, mock_ctx):
-        """Saved JSON contains best_params, best_score, all_trials, and score_version."""
+        """Saved JSON contains best_params, best_score, all_trials, and
+        score_version."""
         results = {
             "best_params": {"threads": 8, "ctx": 4096},
             "best_score": 95.2,

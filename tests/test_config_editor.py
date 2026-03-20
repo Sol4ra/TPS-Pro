@@ -7,15 +7,13 @@ No subprocess needed — functions are tested directly.
 from __future__ import annotations
 
 import json
-import tempfile
-from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from tps_pro.pipeline_config import PipelineConfig, PhaseConfig
+from tps_pro.pipeline_config import PhaseConfig, PipelineConfig
 
 # ── Helpers ──────────────────────────────────────────────────────
 

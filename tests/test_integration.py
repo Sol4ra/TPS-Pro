@@ -1,7 +1,9 @@
-"""Integration tests verifying component interactions across the llama_optimizer pipeline.
+"""Integration tests verifying component interactions across the
+llama_optimizer pipeline.
 
 Mocks llama-server HTTP endpoints but lets everything else run for real.
-Tests cross-module boundaries: server lifecycle -> measurement -> scoring -> study management.
+Tests cross-module boundaries: server lifecycle -> measurement -> scoring ->
+study management.
 """
 
 from __future__ import annotations
@@ -167,7 +169,8 @@ class TestServerMeasurementFlow:
 
 @pytest.mark.integration
 class TestTrialLifecycle:
-    """Test run_server_trial() end-to-end: boot -> gate -> adaptive measurement -> score."""
+    """Test run_server_trial() end-to-end: boot -> gate -> adaptive measurement ->
+    score."""
 
     @patch(
         "tps_pro.phases.trial_helpers.get_vram_used_mb",
@@ -302,7 +305,8 @@ class TestPhaseResultRoundTrip:
 
 @pytest.mark.integration
 class TestBaselineTrialComparison:
-    """Test setup_baseline_server() -> run_server_trial() with a trial that beats baseline."""
+    """Test setup_baseline_server() -> run_server_trial() with a trial that beats
+    baseline."""
 
     @patch(
         "tps_pro.phases.trial_helpers.get_vram_used_mb",

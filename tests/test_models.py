@@ -1,4 +1,5 @@
-"""Tests for model classification, quantization recommendation, and GGUF parsing from models.py.
+"""Tests for model classification, quantization recommendation, and GGUF parsing
+from models.py.
 
 models.py is a leaf module (no internal package imports), so all functions
 are imported directly without triggering state.py side effects.

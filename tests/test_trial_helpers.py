@@ -84,7 +84,8 @@ class TestRecordTrialAttrs:
         return_value=4096.0,
     )
     def test_perf_result_path_with_vram(self, mock_vram):
-        """When perf is a PerfResult and VRAM is available, returns new PerfResult with vram_used_mb set."""
+        """When perf is a PerfResult and VRAM is available, returns new PerfResult
+        with vram_used_mb set."""
 
         perf = _make_perf()
         trial = _make_trial()
@@ -263,7 +264,8 @@ class TestRunStudyWithCallbacks:
             is_pareto=True,
         )
 
-        # Verify optimize was called with callbacks that do NOT include GPStoppingCallback
+        # Verify optimize was called with callbacks that do NOT include
+        # GPStoppingCallback
         args, kwargs = study.optimize.call_args
         callbacks = kwargs.get("callbacks", args[2] if len(args) > 2 else [])
         # In pareto mode, only ProgressBarUpdateCallback should be present

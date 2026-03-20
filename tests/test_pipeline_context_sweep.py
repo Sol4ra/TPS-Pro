@@ -7,7 +7,7 @@ and ctx.naked_engine mutation via update_naked_engine.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

@@ -14,7 +14,6 @@ import pytest
 
 from tps_pro.phases.workload import phase_workload_sim
 
-
 _WL = "tps_pro.phases.workload"
 
 

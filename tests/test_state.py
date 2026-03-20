@@ -725,7 +725,8 @@ class TestLoadConfig:
             ),
         ):
             config = _load_config()
-            # Deep merge: architecture.type updated, but expert_override_key preserved from defaults
+            # Deep merge: architecture.type updated, but expert_override_key
+            # preserved from defaults
             assert config["architecture"]["type"] == "moe"
             assert config["architecture"]["default_experts"] == 4
             assert "expert_override_key" in config["architecture"]

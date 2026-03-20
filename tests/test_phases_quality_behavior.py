@@ -15,7 +15,6 @@ import pytest
 
 from tps_pro.phases.quality import phase_quality
 
-
 _Q = "tps_pro.phases.quality"
 
 

@@ -59,6 +59,9 @@ select = ["E", "F", "I", "N", "W", "B"]
 "src/tps_pro/engine/platform.py" = ["N801"]
 "src/tps_pro/cli/report.py" = ["E501"]  # HTML/CSS templates have long lines
 "tests/_tui_harness.py" = ["E402"]  # Test harness uses deliberate late imports after patching
+"tests/test_evals_full_ppl.py" = ["F811"]  # pytest fixtures imported and used as method params
+"tests/test_evals_full_niah.py" = ["F811"]  # pytest fixtures imported and used as method params
+"tests/test_evals_full_integrity.py" = ["F811"]  # pytest fixtures imported and used as method params
 
 [tool.mypy]
 python_version = "3.9"
